@@ -198,12 +198,12 @@ static func _scatter_nature_props(
 		"rock_largeA.fbx", "rock_largeB.fbx", "rock_largeC.fbx",
 		"rock_smallA.fbx", "rock_smallB.fbx", "rock_smallC.fbx",
 	]
-	var path_clearance := road_width * 0.5 + 2.4
+	var path_clearance: float = road_width * 0.5 + 2.4
 	var pad := 4.0
-	var min_x := road.min_x - pad
-	var max_x := road.max_x + pad
-	var min_z := road.min_z - pad
-	var max_z := road.max_z + pad
+	var min_x: float = road.min_x - pad
+	var max_x: float = road.max_x + pad
+	var min_z: float = road.min_z - pad
+	var max_z: float = road.max_z + pad
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 90210
