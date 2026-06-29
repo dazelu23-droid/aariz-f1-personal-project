@@ -7,11 +7,13 @@ const CURB_W := 0.14
 
 static var _placed_road_aabbs: Array = []
 static var _road_cells: Dictionary = {}
+static var _wall_seg_index: int = 0
 
 
 static func _reset_road_overlap_tracker() -> void:
 	_placed_road_aabbs.clear()
 	_road_cells.clear()
+	_wall_seg_index = 0
 
 
 static func build_racing_circuit(
@@ -33,22 +35,21 @@ static func build_racing_circuit(
 	_place_decal(track, kit, "roadStraightArrow.glb", Vector3(0, 0, -2), 0.0)
 
 	for i in range(1, north):
-		_tile(track, border, Vector3(0, 0, -i * tile), 0.0, false, tile, width, true)
-	_tile(track, border, Vector3(0, 0, -north * tile + tile), 0.0, true, tile, width, true)
+		_tile(track, border, Vector3(0, 0, -i * tile), 0.0, false, tile, width, true, MeshFactory.ASPHALT, "racing")
+	_tile(track, border, Vector3(0, 0, -north * tile + tile), 0.0, true, tile, width, true, MeshFactory.ASPHALT, "racing")
 	for i in range(east - 1):
-		_tile(track, border, Vector3(2.0 + i * tile, 0, -north * tile), -90.0, false, tile, width, true)
-	_tile(track, border, Vector3(2.0 + (east - 1) * tile, 0, -north * tile), -90.0, true, tile, width, true)
+		_tile(track, border, Vector3(2.0 + i * tile, 0, -north * tile), -90.0, false, tile, width, true, MeshFactory.ASPHALT, "racing")
+	_tile(track, border, Vector3(2.0 + (east - 1) * tile, 0, -north * tile), -90.0, true, tile, width, true, MeshFactory.ASPHALT, "racing")
 	var east_x := 2.0 + (east - 1) * tile
 	for i in range(south - 1):
-		_tile(track, border, Vector3(east_x, 0, -north * tile + tile + i * tile), 180.0, false, tile, width, true)
-	_tile(track, border, Vector3(east_x, 0, -north * tile + south * tile), 180.0, true, tile, width, true)
+		_tile(track, border, Vector3(east_x, 0, -north * tile + tile + i * tile), 180.0, false, tile, width, true, MeshFactory.ASPHALT, "racing")
+	_tile(track, border, Vector3(east_x, 0, -north * tile + south * tile), 180.0, true, tile, width, true, MeshFactory.ASPHALT, "racing")
 	for i in range(west - 1):
-		_tile(track, border, Vector3(east_x - tile - i * tile, 0, -north * tile + south * tile + tile), 90.0, false, tile, width, true)
-	_tile(track, border, Vector3(0, 0, -north * tile + south * tile + tile), 90.0, true, tile, width, true)
+		_tile(track, border, Vector3(east_x - tile - i * tile, 0, -north * tile + south * tile + tile), 90.0, false, tile, width, true, MeshFactory.ASPHALT, "racing")
+	_tile(track, border, Vector3(0, 0, -north * tile + south * tile + tile), 90.0, true, tile, width, true, MeshFactory.ASPHALT, "racing")
 
 	_flush_road_collision(track)
 	var layout: Dictionary = _preview_waypoint_layout(_racing_waypoints(tile, north, east, south, west), tile * 0.5)
-	_place_track_edge_walls(border, layout, width, "racing")
 	_fence_racing(border, kit, tile, width, north, east)
 	_place_path_guides(track, layout, kit)
 	_place_visual_barriers(border, layout, width, kit, 2.0)
@@ -208,13 +209,12 @@ static func _build_waypoint_circuit(
 			var anchor := a + dir * (seg_len * t0)
 			var center := a.lerp(b, (t0 + t1) * 0.5)
 			var is_corner := step == steps - 1 and rot != next_rot
-			_tile(track, border, anchor, rot, is_corner, tile, width, use_curbs, surface)
+			_tile(track, border, anchor, rot, is_corner, tile, width, use_curbs, surface, edge_theme)
 			samples.append(center)
 		samples.append(b)
 
 	var layout := _layout_from_samples(samples, tile)
 	_flush_road_collision(track)
-	_place_track_edge_walls(border, layout, width, edge_theme)
 	return layout
 
 
@@ -409,7 +409,8 @@ static func _tile(
 	tile: float,
 	width: float,
 	f1_curbs: bool,
-	surface_color: Color = MeshFactory.ASPHALT
+	surface_color: Color = MeshFactory.ASPHALT,
+	edge_theme: String = ""
 ) -> void:
 	var spec := _slab_spec(anchor, rotation_y_deg, is_corner, tile, width)
 	var covered := _road_already_covered(spec, rotation_y_deg)
@@ -420,7 +421,8 @@ static func _tile(
 		_register_road_aabb(spec, rotation_y_deg)
 		if f1_curbs:
 			MeshFactory.add_track_line(track, spec.line_center, spec.line_size, rotation_y_deg)
-			_place_curbs(border, spec, rotation_y_deg)
+		if edge_theme != "":
+			_place_edge_walls_for_spec(border, spec, rotation_y_deg, edge_theme)
 	_stamp_road_cells(spec, rotation_y_deg, surface_color)
 
 
@@ -481,40 +483,55 @@ static func _flush_road_collision(track: Node3D) -> void:
 	MeshFactory.add_merged_road_collision(track, _road_cells, cell, SLAB_H)
 
 
-static func _place_track_edge_walls(
+static func _place_edge_walls_for_spec(
 	border: Node3D,
-	layout: Dictionary,
-	width: float,
+	spec: Dictionary,
+	rot: float,
 	theme: String
 ) -> void:
-	var samples: Array = layout.get("samples", [])
-	if samples.size() < 2:
-		return
 	const WALL_H := 0.72
-	const WALL_W := 0.24
-	const EDGE_PAD := 0.55
-	for i in range(0, samples.size() - 1, 1):
-		var a: Vector3 = samples[i]
-		var b: Vector3 = samples[i + 1]
-		if a.distance_squared_to(b) < 0.02:
-			continue
-		var dir := (b - a).normalized()
-		var perp := Vector3(-dir.z, 0.0, dir.x)
-		var rot := _direction_to_rot(dir)
-		var seg_len := maxf(a.distance_to(b), 0.6)
-		var p := a.lerp(b, 0.5)
-		var offset := width * 0.5 + EDGE_PAD
-		for side: float in [-1.0, 1.0]:
-			var wall_center := p + perp * offset * side + Vector3(0.0, WALL_H * 0.5, 0.0)
-			var color := _edge_wall_color(theme, i, side)
-			MeshFactory.add_surface_slab(
-				border,
-				wall_center,
-				Vector3(WALL_W, WALL_H, seg_len + 0.08),
-				rot,
-				color,
-				true
-			)
+	const WALL_W := 0.2
+	const SHOULDER := 0.42
+	var size: Vector3 = spec.size
+	var center: Vector3 = spec.center
+	var norm := int(rot) % 360
+	if norm < 0:
+		norm += 360
+	var road_half := size.x * 0.5
+	var long_len := size.z
+	if norm == 90 or norm == 270:
+		road_half = size.z * 0.5
+		long_len = size.x
+	var y := WALL_H * 0.5
+	var out := road_half + SHOULDER + WALL_W * 0.5
+	var idx := _wall_seg_index
+	_wall_seg_index += 1
+
+	match norm:
+		0:
+			_place_side_wall(border, center + Vector3(-out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, -1.0)
+			_place_side_wall(border, center + Vector3(out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, 1.0)
+		270:
+			_place_side_wall(border, center + Vector3(0, y, -out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, -1.0)
+			_place_side_wall(border, center + Vector3(0, y, out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, 1.0)
+		180:
+			_place_side_wall(border, center + Vector3(out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, -1.0)
+			_place_side_wall(border, center + Vector3(-out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, 1.0)
+		_:
+			_place_side_wall(border, center + Vector3(0, y, out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, -1.0)
+			_place_side_wall(border, center + Vector3(0, y, -out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, 1.0)
+
+
+static func _place_side_wall(
+	border: Node3D,
+	center: Vector3,
+	size: Vector3,
+	rot: float,
+	theme: String,
+	index: int,
+	side: float
+) -> void:
+	MeshFactory.add_surface_slab(border, center, size, rot, _edge_wall_color(theme, index, side), true)
 
 
 static func _edge_wall_color(theme: String, index: int, side: float) -> Color:
@@ -617,32 +634,6 @@ static func _slab_spec_small(anchor: Vector3, rot: float, corner: bool, tile: fl
 				"line_center": anchor + Vector3(-0.5, SLAB_H + 0.015, -0.5),
 				"line_size": Vector3(tile, 0.02, 0.08),
 			}
-
-
-static func _place_curbs(border: Node3D, spec: Dictionary, rot: float) -> void:
-	var size: Vector3 = spec.size
-	var center: Vector3 = spec.center
-	var half_w := size.x * 0.5
-	var half_l := size.z * 0.5
-	var y := CURB_H * 0.5
-	var long_len := maxf(size.x, size.z)
-	var norm := int(rot) % 360
-	if norm < 0:
-		norm += 360
-
-	match norm:
-		0:
-			MeshFactory.add_curb(border, center + Vector3(-half_w - 0.07, y, 0), Vector3(CURB_W, CURB_H, long_len), 0, MeshFactory.CURB_RED)
-			MeshFactory.add_curb(border, center + Vector3(half_w + 0.07, y, 0), Vector3(CURB_W, CURB_H, long_len), 0, MeshFactory.CURB_WHITE)
-		270:
-			MeshFactory.add_curb(border, center + Vector3(0, y, -half_w - 0.07), Vector3(long_len, CURB_H, CURB_W), 0, MeshFactory.CURB_RED)
-			MeshFactory.add_curb(border, center + Vector3(0, y, half_w + 0.07), Vector3(long_len, CURB_H, CURB_W), 0, MeshFactory.CURB_WHITE)
-		180:
-			MeshFactory.add_curb(border, center + Vector3(half_w + 0.07, y, 0), Vector3(CURB_W, CURB_H, long_len), 0, MeshFactory.CURB_RED)
-			MeshFactory.add_curb(border, center + Vector3(-half_w - 0.07, y, 0), Vector3(CURB_W, CURB_H, long_len), 0, MeshFactory.CURB_WHITE)
-		_:
-			MeshFactory.add_curb(border, center + Vector3(0, y, half_w + 0.07), Vector3(long_len, CURB_H, CURB_W), 0, MeshFactory.CURB_RED)
-			MeshFactory.add_curb(border, center + Vector3(0, y, -half_w - 0.07), Vector3(long_len, CURB_H, CURB_W), 0, MeshFactory.CURB_WHITE)
 
 
 static func _fence_racing(
