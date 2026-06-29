@@ -3,8 +3,8 @@ extends RefCounted
 
 
 static func populate_racing(props: Node3D, kit: String) -> void:
-	var road := {"min_x": -1.0, "max_x": 12.0, "min_z": -13.0, "max_z": 3.0}
-	_fill_grid(props, kit + "grass.glb", -4, 15, -15, 5, 1.2, road)
+	var road: Dictionary = RoadBuilder.get_racing_layout()["bounds"]
+	_fill_grid(props, kit + "grass.glb", road.min_x - 6, road.max_x + 6, road.min_z - 6, road.max_z + 6, 1.2, road)
 	_place_start_line(props, kit, road)
 	_place_pit_complex(props, kit, road)
 	_place_grandstands(props, kit, road)
@@ -28,59 +28,69 @@ static func _place_city_canyon_walls(props: Node3D, buildings: String, layout: D
 	var south_x: float = bounds.south_x
 	var south_end: float = bounds.south_end
 	var west_z: float = bounds.west_z
-	var step := 1.35
+	var road: Dictionary = bounds
+	var step := 1.6
+	var wall_gap := 7.5
+	var far_gap := 10.5
 	var idx := 0
 
-	# North straight — buildings hug both sides of the street.
+	# North straight — outer canyon walls only (well clear of asphalt).
 	var z := 0.5
 	while z >= north_end - 0.5:
-		_place_city_building(props, buildings, Vector3(-2.4, 0, z), idx)
-		_place_city_building(props, buildings, Vector3(3.6, 0, z), idx + 1)
-		_place_city_building(props, buildings, Vector3(-4.0, 0, z), idx + 2, true)
-		_place_city_building(props, buildings, Vector3(5.2, 0, z), idx + 3, true)
+		_place_city_building_safe(props, buildings, Vector3(-wall_gap, 0, z), idx, road)
+		_place_city_building_safe(props, buildings, Vector3(wall_gap + 1.5, 0, z), idx + 1, road)
+		_place_city_building_safe(props, buildings, Vector3(-far_gap, 0, z), idx + 2, road, true)
+		_place_city_building_safe(props, buildings, Vector3(far_gap + 1.5, 0, z), idx + 3, road, true)
 		z -= step
 		idx += 4
 
-	# East straight — north canyon wall + south courtyard wall.
+	# East straight — buildings north of the road only.
 	var x := tile
 	while x <= east_end + 0.5:
-		_place_city_building(props, buildings, Vector3(x, 0, east_z - 2.6), idx)
-		_place_city_building(props, buildings, Vector3(x, 0, east_z + 1.4), idx + 1)
-		_place_city_building(props, buildings, Vector3(x, 0, east_z - 4.2), idx + 2, true)
-		_place_city_building(props, buildings, Vector3(x, 0, east_z + 3.0), idx + 3, true)
+		_place_city_building_safe(props, buildings, Vector3(x, 0, east_z - wall_gap), idx, road)
+		_place_city_building_safe(props, buildings, Vector3(x, 0, east_z - far_gap), idx + 1, road, true)
 		x += step
-		idx += 4
+		idx += 2
 
-	# South straight — east outer wall + west inner wall.
+	# South straight — buildings east of the road only.
 	z = north_end
 	while z <= south_end + 0.5:
-		_place_city_building(props, buildings, Vector3(south_x + 2.4, 0, z), idx)
-		_place_city_building(props, buildings, Vector3(south_x - 2.6, 0, z), idx + 1)
-		_place_city_building(props, buildings, Vector3(south_x + 4.0, 0, z), idx + 2, true)
-		_place_city_building(props, buildings, Vector3(south_x - 4.2, 0, z), idx + 3, true)
+		_place_city_building_safe(props, buildings, Vector3(south_x + wall_gap, 0, z), idx, road)
+		_place_city_building_safe(props, buildings, Vector3(south_x + far_gap, 0, z), idx + 1, road, true)
 		z += step
-		idx += 4
+		idx += 2
 
-	# West straight — south outer wall + north inner wall.
+	# West straight — buildings south of the road only.
 	x = south_x - tile
 	while x >= 0.0:
-		_place_city_building(props, buildings, Vector3(x, 0, west_z + 2.4), idx)
-		_place_city_building(props, buildings, Vector3(x, 0, west_z - 1.6), idx + 1)
-		_place_city_building(props, buildings, Vector3(x, 0, west_z + 4.0), idx + 2, true)
-		_place_city_building(props, buildings, Vector3(x, 0, west_z - 3.2), idx + 3, true)
+		_place_city_building_safe(props, buildings, Vector3(x, 0, west_z + wall_gap), idx, road)
+		_place_city_building_safe(props, buildings, Vector3(x, 0, west_z + far_gap), idx + 1, road, true)
 		x -= step
-		idx += 4
+		idx += 2
 
-	# Corner towers anchor the circuit.
+	# Corner skyscrapers sit on outer wall offsets only.
 	var corners := [
-		Vector3(-2.4, 0, 0.5),
-		Vector3(3.6, 0, north_end - 0.5),
-		Vector3(east_end + 2.4, 0, east_z - 2.6),
-		Vector3(south_x + 2.4, 0, south_end + 0.5),
-		Vector3(0.5, 0, west_z + 2.4),
+		Vector3(-wall_gap, 0, 0.5),
+		Vector3(wall_gap + 1.5, 0, north_end - 0.5),
+		Vector3(east_end + wall_gap, 0, east_z - wall_gap),
+		Vector3(south_x + wall_gap, 0, south_end + 0.5),
+		Vector3(0.5, 0, west_z + wall_gap),
 	]
 	for i in corners.size():
-		_place_city_building(props, buildings, corners[i], idx + i, true)
+		_place_city_building_safe(props, buildings, corners[i], idx + i, road, true)
+
+
+static func _place_city_building_safe(
+	props: Node3D,
+	buildings: String,
+	pos: Vector3,
+	idx: int,
+	road: Dictionary,
+	tall: bool = false
+) -> void:
+	if _on_road_expanded(pos, road, 6.0):
+		return
+	_place_city_building(props, buildings, pos, idx, tall)
 
 
 static func _place_city_outer_fill(props: Node3D, buildings: String, road: Dictionary) -> void:
@@ -92,32 +102,31 @@ static func _place_city_outer_fill(props: Node3D, buildings: String, road: Dicti
 		"low-detail-building-a.obj", "low-detail-building-b.obj", "low-detail-building-c.obj",
 		"low-detail-building-d.obj", "low-detail-building-e.obj", "low-detail-building-f.obj",
 	]
-	var idx := 0
-	for x in range(-14, 30, 2):
-		_place_if_clear(props, buildings, towers[abs(x) % towers.size()], Vector3(x, 0, road.min_z - 5.5), 0.0, road, 3.0)
-		_place_if_clear(props, buildings, towers[(abs(x) + 2) % towers.size()], Vector3(x, 0, road.max_z + 5.5), 180.0, road, 3.0)
-		idx += 1
-	for z in range(int(road.min_z) - 4, int(road.max_z) + 5, 2):
-		_place_if_clear(props, buildings, towers[abs(z) % towers.size()], Vector3(road.min_x - 5.5, 0, z), 90.0, road, 3.0)
-		_place_if_clear(props, buildings, towers[(abs(z) + 1) % towers.size()], Vector3(road.max_x + 5.5, 0, z), -90.0, road, 3.0)
-	for x in range(-10, 26, 3):
-		for z in range(-16, 4, 3):
+	var pad := 8.0
+	for x in range(int(road.min_x) - 20, int(road.max_x) + 22, 2):
+		_place_if_clear(props, buildings, towers[abs(x) % towers.size()], Vector3(x, 0, road.min_z - pad), 0.0, road, 5.0)
+		_place_if_clear(props, buildings, towers[(abs(x) + 2) % towers.size()], Vector3(x, 0, road.max_z + pad), 180.0, road, 5.0)
+	for z in range(int(road.min_z) - 18, int(road.max_z) + 20, 2):
+		_place_if_clear(props, buildings, towers[abs(z) % towers.size()], Vector3(road.min_x - pad, 0, z), 90.0, road, 5.0)
+		_place_if_clear(props, buildings, towers[(abs(z) + 1) % towers.size()], Vector3(road.max_x + pad, 0, z), -90.0, road, 5.0)
+	for x in range(int(road.min_x) - 8, int(road.max_x) + 10, 4):
+		for z in range(int(road.min_z) - 8, int(road.max_z) + 10, 4):
 			var pos := Vector3(x, 0, z)
-			if _on_road_expanded(pos, road, 4.0):
+			if _on_road_expanded(pos, road, 7.0):
 				continue
 			var edge := _road_edge_distance(pos, road)
-			if edge < 6.0 or edge > 14.0:
+			if edge < 12.0 or edge > 28.0:
 				continue
-			_place(props, buildings, low[(x + z + idx) % low.size()], pos, float((x + z) * 23.0))
+			_place(props, buildings, low[(x + z) % low.size()], pos, float((x + z) * 23.0))
 
 
 static func _place_city_street_lights(props: Node3D, roads: String, road: Dictionary) -> void:
-	for x in range(-8, 22, 5):
-		_place_if_clear(props, roads, "light-square.obj", Vector3(x, 0, road.min_z - 3.8), 0.0, road, 2.5)
-		_place_if_clear(props, roads, "light-curved.obj", Vector3(x, 0, road.max_z + 3.8), 180.0, road, 2.5)
-	for z in range(int(road.min_z) - 2, int(road.max_z) + 3, 5):
-		_place_if_clear(props, roads, "light-square.obj", Vector3(road.min_x - 3.8, 0, z), 90.0, road, 2.5)
-		_place_if_clear(props, roads, "light-curved.obj", Vector3(road.max_x + 3.8, 0, z), -90.0, road, 2.5)
+	for x in range(int(road.min_x) - 4, int(road.max_x) + 6, 6):
+		_place_if_clear(props, roads, "light-square.obj", Vector3(x, 0, road.min_z - 5.5), 0.0, road, 4.0)
+		_place_if_clear(props, roads, "light-curved.obj", Vector3(x, 0, road.max_z + 5.5), 180.0, road, 4.0)
+	for z in range(int(road.min_z) - 4, int(road.max_z) + 6, 6):
+		_place_if_clear(props, roads, "light-square.obj", Vector3(road.min_x - 5.5, 0, z), 90.0, road, 4.0)
+		_place_if_clear(props, roads, "light-curved.obj", Vector3(road.max_x + 5.5, 0, z), -90.0, road, 4.0)
 
 
 static func _place_city_building(
@@ -166,30 +175,42 @@ static func _on_road_expanded(pos: Vector3, road: Dictionary, margin: float) -> 
 
 
 static func populate_nature(props: Node3D, nature: String) -> void:
-	var road := {"min_x": -0.5, "max_x": 7.5, "min_z": -5.5, "max_z": 1.5}
-	_fill_grid(props, nature + "ground_grass.fbx", -8, 12, -10, 6, 1.0, road)
+	var road: Dictionary = RoadBuilder.get_nature_layout()["bounds"]
+	_fill_grid(
+		props,
+		nature + "ground_grass.fbx",
+		road.min_x - 10,
+		road.max_x + 10,
+		road.min_z - 10,
+		road.max_z + 10,
+		1.0,
+		road
+	)
 
-	var trees := [
-		Vector3(-2, 0, -2), Vector3(-3, 0, -5), Vector3(8, 0, -4),
-		Vector3(8, 0, 2), Vector3(-1, 0, 3), Vector3(3, 0, -6),
-		Vector3(2, 0, 0), Vector3(5, 0, -2), Vector3(-5, 0, -8),
-		Vector3(10, 0, -7), Vector3(9, 0, 4), Vector3(-4, 0, 5),
-	]
+	var min_x := int(road.min_x) - 8
+	var max_x := int(road.max_x) + 8
+	var min_z := int(road.min_z) - 8
+	var max_z := int(road.max_z) + 8
 	var tree_models := ["tree_default.fbx", "tree_pineDefaultA.fbx", "tree_oak.fbx", "tree_cone.fbx"]
-	for i in trees.size():
-		if not _on_road(trees[i], road):
-			_place(props, nature, tree_models[i % tree_models.size()], trees[i], float(i) * 40.0)
+	var idx := 0
+	for x in range(min_x, max_x, 2):
+		for z in range(min_z, max_z, 2):
+			if _on_road_expanded(Vector3(x, 0, z), road, 2.0):
+				continue
+			if (x + z) % 3 != 0:
+				continue
+			_place(props, nature, tree_models[idx % tree_models.size()], Vector3(x, 0, z), float(idx) * 29.0)
+			idx += 1
 
-	var nature_props := [
-		{"file": "rock_largeA.fbx", "pos": Vector3(-1, 0, -4)},
-		{"file": "rock_largeC.fbx", "pos": Vector3(7, 0, -5)},
-		{"file": "campfire_stones.fbx", "pos": Vector3(2, 0, -1)},
-		{"file": "cactus_short.fbx", "pos": Vector3(8, 0, -6)},
-		{"file": "bridge_wood.fbx", "pos": Vector3(11, 0, 0), "rot": -90.0},
+	var rock_spots := [
+		Vector3(road.min_x - 2, 0, road.min_z + 2),
+		Vector3(road.max_x + 1, 0, road.min_z + 1),
+		Vector3(road.max_x, 0, road.max_z + 2),
+		Vector3(road.min_x - 1, 0, road.max_z),
 	]
-	for p in nature_props:
-		if not _on_road(p.pos, road):
-			_place(props, nature, p.file, p.pos, p.get("rot", 0.0))
+	for i in rock_spots.size():
+		if not _on_road_expanded(rock_spots[i], road, 2.5):
+			_place(props, nature, "rock_largeA.fbx" if i % 2 == 0 else "rock_largeC.fbx", rock_spots[i], float(i) * 45.0)
 
 
 static func _place_start_line(props: Node3D, kit: String, road: Dictionary) -> void:
@@ -209,28 +230,31 @@ static func _place_grandstands(props: Node3D, kit: String, road: Dictionary) -> 
 	var models := ["grandStand.glb", "grandStandCovered.glb", "grandStandRound.glb"]
 	var z_pos := -2.0
 	var idx := 0
-	while z_pos >= -10.0:
-		_place_if_clear(props, kit, models[idx % 3], Vector3(3.0, 0, z_pos), -90.0, road)
-		_place_if_clear(props, kit, models[(idx + 1) % 3], Vector3(-2.0, 0, z_pos), 90.0, road)
+	while z_pos >= road.min_z + 2.0:
+		_place_if_clear(props, kit, models[idx % 3], Vector3(road.max_x - 2.0, 0, z_pos), -90.0, road, 2.5)
+		_place_if_clear(props, kit, models[(idx + 1) % 3], Vector3(road.min_x - 1.5, 0, z_pos), 90.0, road, 2.5)
 		z_pos -= 2.0
 		idx += 1
-	for z_off in [-8.0, -10.0, -12.0]:
-		_place_if_clear(props, kit, "grandStandCoveredRound.glb", Vector3(13.0, 0, z_off), -90.0, road)
+	for z_off in [road.min_z + 4.0, road.min_z + 2.0, road.min_z]:
+		if z_off > road.min_z - 6.0:
+			_place_if_clear(props, kit, "grandStandCoveredRound.glb", Vector3(road.max_x - 1.0, 0, z_off), -90.0, road, 2.5)
 
 
 static func _place_corners(props: Node3D, kit: String, road: Dictionary) -> void:
 	var corners := [
-		{"file": "roadCornerLargeSand.glb", "pos": Vector3(-1.0, 0, -11.0), "rot": 0.0},
-		{"file": "roadCornerLargeWall.glb", "pos": Vector3(11.0, 0, -13.5), "rot": -90.0},
-		{"file": "roadCornerLargeSand.glb", "pos": Vector3(12.5, 0, 1.0), "rot": 180.0},
+		{"file": "roadCornerLargeSand.glb", "pos": Vector3(road.min_x, 0, road.min_z + 2.0), "rot": 0.0},
+		{"file": "roadCornerLargeWall.glb", "pos": Vector3(road.max_x - 2.0, 0, road.min_z), "rot": -90.0},
+		{"file": "roadCornerLargeSand.glb", "pos": Vector3(road.max_x - 1.0, 0, road.max_z - 1.0), "rot": 180.0},
 	]
 	for c in corners:
-		_place_if_clear(props, kit, c.file, c.pos, c.rot, road)
+		_place_if_clear(props, kit, c.file, c.pos, c.rot, road, 2.0)
 
 
 static func _place_back_straight(props: Node3D, kit: String, road: Dictionary) -> void:
-	for z in [-2.0, -6.0, -10.0]:
-		_place_if_clear(props, kit, "billboard.glb", Vector3(13.2, 0, z), -90.0, road)
+	var z := -2.0
+	while z >= road.min_z + 4.0:
+		_place_if_clear(props, kit, "billboard.glb", Vector3(road.max_x - 0.5, 0, z), -90.0, road, 2.5)
+		z -= 4.0
 
 
 static func _place_if_clear(

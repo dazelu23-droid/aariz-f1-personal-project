@@ -2,9 +2,9 @@ class_name FollowCamera
 extends Camera3D
 
 @export var target_path: NodePath
-@export var follow_distance := 16.0
-@export var follow_height := 6.0
-@export var look_ahead := 10.0
+@export var follow_distance := 20.0
+@export var follow_height := 7.5
+@export var look_ahead := 14.0
 @export var smooth_speed := 8.0
 
 var _target: Node3D

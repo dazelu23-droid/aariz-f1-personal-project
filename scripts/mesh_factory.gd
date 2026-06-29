@@ -163,7 +163,9 @@ static func _add_colored_box(
 	mesh_instance.mesh = box
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
-	mat.roughness = 0.9
+	mat.roughness = 0.82
+	mat.metallic = 0.04
+	mat.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
 	mesh_instance.material_override = mat
 	body.add_child(mesh_instance)
 
@@ -207,8 +209,9 @@ static func _find_all_mesh_instances(node: Node) -> Array[MeshInstance3D]:
 
 static func _make_material(texture_path: String) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
-	mat.roughness = 0.85
-	mat.metallic = 0.05
-	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
+	mat.roughness = 0.72
+	mat.metallic = 0.08
+	mat.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	mat.albedo_texture = load(texture_path)
 	return mat

@@ -14,11 +14,11 @@ func get_track_name() -> String:
 
 
 func get_world_scale() -> float:
-	return 4.0
+	return 5.0
 
 
 func get_track_center_offset() -> Vector3:
-	return Vector3(-3.5, 0.0, 2.0)
+	return Vector3(-7.0, 0.0, 6.0)
 
 
 func get_ground_color() -> Color:
@@ -26,7 +26,7 @@ func get_ground_color() -> Color:
 
 
 func get_ground_size() -> float:
-	return 120.0
+	return 260.0
 
 
 func _build_track() -> void:
