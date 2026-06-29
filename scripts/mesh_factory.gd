@@ -140,9 +140,40 @@ static func add_curb(
 	center: Vector3,
 	size: Vector3,
 	rotation_y_deg: float,
-	color: Color
+	color: Color,
+	with_collision: bool = false
 ) -> StaticBody3D:
-	return _add_colored_box(parent, center, size, rotation_y_deg, color, true)
+	return _add_colored_box(parent, center, size, rotation_y_deg, color, with_collision)
+
+
+static func add_merged_road_collision(
+	parent: Node3D,
+	cells: Dictionary,
+	cell_size: float,
+	height: float
+) -> void:
+	if cells.is_empty():
+		return
+	var body := StaticBody3D.new()
+	body.collision_layer = 1
+	body.collision_mask = 0
+	var overlap := 0.04
+	for key in cells:
+		var parts: PackedStringArray = key.split(",")
+		var ix := int(parts[0])
+		var iz := int(parts[1])
+		var center := Vector3(
+			(float(ix) + 0.5) * cell_size,
+			height * 0.5,
+			(float(iz) + 0.5) * cell_size
+		)
+		var collision := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = Vector3(cell_size + overlap, height, cell_size + overlap)
+		collision.shape = shape
+		collision.position = center
+		body.add_child(collision)
+	parent.add_child(body)
 
 
 static func add_track_line(

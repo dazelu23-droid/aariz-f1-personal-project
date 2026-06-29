@@ -15,8 +15,15 @@ func _ready() -> void:
 	linear_damp = 0.04
 	angular_damp = 1.1
 	contact_monitor = true
-	max_contacts_reported = 4
+	max_contacts_reported = 8
 	sleeping = false
+	can_sleep = false
+	continuous_cd = true
+	var road_grip := PhysicsMaterial.new()
+	road_grip.friction = 1.05
+	road_grip.bounce = 0.0
+	road_grip.absorbent = true
+	physics_material_override = road_grip
 
 
 func _physics_process(delta: float) -> void:

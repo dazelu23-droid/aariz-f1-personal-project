@@ -47,8 +47,9 @@ static func build_racing_circuit(
 	_tile(track, border, Vector3(0, 0, -north * tile + south * tile + tile), 90.0, true, tile, width, true)
 
 	_flush_road_collision(track)
-	_fence_racing(border, kit, tile, width, north, east)
 	var layout: Dictionary = _preview_waypoint_layout(_racing_waypoints(tile, north, east, south, west), tile * 0.5)
+	_place_track_edge_walls(border, layout, width, "racing")
+	_fence_racing(border, kit, tile, width, north, east)
 	_place_path_guides(track, layout, kit)
 	_place_visual_barriers(border, layout, width, kit, 2.0)
 	_fill_ground_excluding(fill, road.min_x - 28, road.max_x + 28, road.min_z - 28, road.max_z + 28, 1.0, road, kit + "grass.glb")
@@ -104,7 +105,7 @@ static func build_city_circuit(
 	var width := 3.2
 	var waypoints: Array = _chamfer_waypoints(_city_street_waypoints(), 2.2)
 	var layout: Dictionary = _build_waypoint_circuit(
-		track, border, waypoints, tile, width, true, MeshFactory.ASPHALT, kit
+		track, border, waypoints, tile, width, true, MeshFactory.ASPHALT, kit, "city"
 	)
 	_place_path_guides(track, layout, kit)
 	MeshFactory.add_start_finish_line(
@@ -173,7 +174,8 @@ static func _build_waypoint_circuit(
 	width: float,
 	use_curbs: bool,
 	surface: Color,
-	kit: String = ""
+	kit: String = "",
+	edge_theme: String = "racing"
 ) -> Dictionary:
 	var samples: Array = []
 	if waypoints.is_empty():
@@ -210,8 +212,10 @@ static func _build_waypoint_circuit(
 			samples.append(center)
 		samples.append(b)
 
+	var layout := _layout_from_samples(samples, tile)
 	_flush_road_collision(track)
-	return _layout_from_samples(samples, tile)
+	_place_track_edge_walls(border, layout, width, edge_theme)
+	return layout
 
 
 static func _place_path_guides(
@@ -345,10 +349,9 @@ static func build_nature_circuit(
 	var width := 2.6
 	var waypoints: Array = _chamfer_waypoints(_nature_trail_waypoints(), 1.6)
 	var layout: Dictionary = _build_waypoint_circuit(
-		track, border, waypoints, tile, width, false, MeshFactory.DIRT
+		track, border, waypoints, tile, width, false, MeshFactory.DIRT, "", "nature"
 	)
 	_place_path_guides(track, layout, "", Color(0.92, 0.88, 0.72))
-	_place_visual_barriers(border, layout, width, "", 1.8)
 	_fill_ground_excluding(
 		fill,
 		layout.bounds.min_x - 28,
@@ -475,19 +478,55 @@ static func _stamp_road_cells(spec: Dictionary, rot_y: float, color: Color) -> v
 
 static func _flush_road_collision(track: Node3D) -> void:
 	const cell := 0.42
-	for key in _road_cells:
-		var parts: PackedStringArray = key.split(",")
-		var ix := int(parts[0])
-		var iz := int(parts[1])
-		var color: Color = _road_cells[key]
-		var center := Vector3(
-			(float(ix) + 0.5) * cell,
-			SLAB_H * 0.5,
-			(float(iz) + 0.5) * cell
-		)
-		MeshFactory.add_surface_slab(
-			track, center, Vector3(cell, SLAB_H, cell), 0.0, color, true
-		)
+	MeshFactory.add_merged_road_collision(track, _road_cells, cell, SLAB_H)
+
+
+static func _place_track_edge_walls(
+	border: Node3D,
+	layout: Dictionary,
+	width: float,
+	theme: String
+) -> void:
+	var samples: Array = layout.get("samples", [])
+	if samples.size() < 2:
+		return
+	const WALL_H := 0.72
+	const WALL_W := 0.24
+	const EDGE_PAD := 0.55
+	for i in range(0, samples.size() - 1, 1):
+		var a: Vector3 = samples[i]
+		var b: Vector3 = samples[i + 1]
+		if a.distance_squared_to(b) < 0.02:
+			continue
+		var dir := (b - a).normalized()
+		var perp := Vector3(-dir.z, 0.0, dir.x)
+		var rot := _direction_to_rot(dir)
+		var seg_len := maxf(a.distance_to(b), 0.6)
+		var p := a.lerp(b, 0.5)
+		var offset := width * 0.5 + EDGE_PAD
+		for side: float in [-1.0, 1.0]:
+			var wall_center := p + perp * offset * side + Vector3(0.0, WALL_H * 0.5, 0.0)
+			var color := _edge_wall_color(theme, i, side)
+			MeshFactory.add_surface_slab(
+				border,
+				wall_center,
+				Vector3(WALL_W, WALL_H, seg_len + 0.08),
+				rot,
+				color,
+				true
+			)
+
+
+static func _edge_wall_color(theme: String, index: int, side: float) -> Color:
+	match theme:
+		"nature":
+			return Color(0.4, 0.28, 0.16) if side > 0.0 else Color(0.48, 0.46, 0.4)
+		"city":
+			return Color(0.55, 0.56, 0.58)
+		_:
+			if index % 2 == 0:
+				return MeshFactory.CURB_RED if side > 0.0 else MeshFactory.CURB_WHITE
+			return MeshFactory.CURB_WHITE if side > 0.0 else MeshFactory.CURB_RED
 
 
 static func _slab_spec(anchor: Vector3, rot: float, corner: bool, tile: float, width: float) -> Dictionary:
