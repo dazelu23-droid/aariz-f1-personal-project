@@ -348,7 +348,6 @@ static func build_nature_circuit(
 	var layout: Dictionary = _build_waypoint_circuit(
 		track, border, waypoints, tile, width, false, MeshFactory.DIRT, ""
 	)
-	_place_path_guides(track, layout, "", Color(0.92, 0.88, 0.72))
 	_fill_ground_excluding(
 		fill,
 		layout.bounds.min_x - 28,

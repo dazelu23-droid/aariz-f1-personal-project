@@ -166,6 +166,7 @@ static func populate_nature(props: Node3D, nature: String) -> void:
 	var layout: Dictionary = RoadBuilder.get_nature_layout()
 	var road: Dictionary = layout.bounds
 	var samples: Array = layout.get("samples", [])
+	var road_width: float = layout.get("width", 2.6)
 	_fill_grid(
 		props,
 		nature + "ground_grass.fbx",
@@ -176,39 +177,57 @@ static func populate_nature(props: Node3D, nature: String) -> void:
 		1.0,
 		road
 	)
-	_place_nature_backdrop(props, nature, road)
-	_place_nature_trees(props, nature, road, samples)
+	_scatter_nature_props(props, nature, road, samples, road_width)
 
 
-static func _place_nature_trees(props: Node3D, nature: String, road: Dictionary, samples: Array) -> void:
-	var min_x := int(road.min_x) - 10
-	var max_x := int(road.max_x) + 10
-	var min_z := int(road.min_z) - 10
-	var max_z := int(road.max_z) + 10
-	var tree_models := ["tree_default.fbx", "tree_pineDefaultA.fbx", "tree_oak.fbx", "tree_cone.fbx"]
-	var idx := 0
-	for x in range(min_x, max_x, 2):
-		for z in range(min_z, max_z, 2):
-			var pos := Vector3(x, 0, z)
-			if _on_road_expanded(pos, road, 2.5):
-				continue
-			if samples.size() > 1 and _near_path(pos, samples, 3.2):
-				continue
-			if (x + z) % 3 != 0:
-				continue
-			_place(props, nature, tree_models[idx % tree_models.size()], pos, float(idx) * 29.0)
-			idx += 1
+static func _scatter_nature_props(
+	props: Node3D,
+	nature: String,
+	road: Dictionary,
+	samples: Array,
+	road_width: float
+) -> void:
+	if samples.size() < 2:
+		return
 
+	var tree_models := [
+		"tree_default.fbx", "tree_pineDefaultA.fbx", "tree_oak.fbx",
+		"tree_cone.fbx", "tree_pineDefaultB.fbx", "tree_detailed.fbx",
+	]
+	var rock_models := [
+		"rock_largeA.fbx", "rock_largeB.fbx", "rock_largeC.fbx",
+		"rock_smallA.fbx", "rock_smallB.fbx", "rock_smallC.fbx",
+	]
+	var path_clearance := road_width * 0.5 + 2.4
+	var pad := 4.0
+	var min_x := road.min_x - pad
+	var max_x := road.max_x + pad
+	var min_z := road.min_z - pad
+	var max_z := road.max_z + pad
 
-static func _place_nature_backdrop(props: Node3D, nature: String, road: Dictionary) -> void:
-	var tree_models := ["tree_pineDefaultA.fbx", "tree_oak.fbx", "tree_default.fbx"]
-	var pad := 18.0
-	for x in range(int(road.min_x) - 12, int(road.max_x) + 14, 3):
-		_place(props, nature, tree_models[abs(x) % tree_models.size()], Vector3(x, 0, road.min_z - pad), float(x))
-		_place(props, nature, tree_models[(abs(x) + 1) % tree_models.size()], Vector3(x, 0, road.max_z + pad), float(x) + 90.0)
-	for z in range(int(road.min_z) - 12, int(road.max_z) + 14, 3):
-		_place(props, nature, tree_models[abs(z) % tree_models.size()], Vector3(road.min_x - pad, 0, z), float(z))
-		_place(props, nature, tree_models[(abs(z) + 2) % tree_models.size()], Vector3(road.max_x + pad, 0, z), float(z) + 45.0)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 90210
+
+	var placed := 0
+	var max_props := 140
+	var attempts := 0
+	var max_attempts := 900
+
+	while placed < max_props and attempts < max_attempts:
+		attempts += 1
+		var pos := Vector3(rng.randf_range(min_x, max_x), 0.0, rng.randf_range(min_z, max_z))
+		if _near_path(pos, samples, path_clearance):
+			continue
+		if rng.randf() > 0.62:
+			continue
+
+		var use_rock := rng.randf() < 0.34
+		var models: Array = rock_models if use_rock else tree_models
+		var model: String = models[rng.randi_range(0, models.size() - 1)]
+		var rot := rng.randf_range(0.0, 360.0)
+		var scale_val := rng.randf_range(0.75, 1.2) if use_rock else rng.randf_range(0.85, 1.35)
+		_place(props, nature, model, pos, rot, Vector3.ONE * scale_val)
+		placed += 1
 
 
 static func _place_start_line(props: Node3D, kit: String, road: Dictionary) -> void:
@@ -298,7 +317,7 @@ static func _on_road(pos: Vector3, road: Dictionary) -> bool:
 	)
 
 
-static func _place(props: Node3D, folder: String, file: String, position: Vector3, rotation_y_deg: float = 0.0) -> void:
+static func _place(props: Node3D, folder: String, file: String, position: Vector3, rotation_y_deg: float = 0.0, piece_scale: Vector3 = Vector3.ONE) -> void:
 	var path := folder + file
 	if ResourceLoader.exists(path):
-		MeshFactory.place_piece(props, path, "", position, rotation_y_deg, false)
+		MeshFactory.place_piece(props, path, "", position, rotation_y_deg, false, piece_scale)
