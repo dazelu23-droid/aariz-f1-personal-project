@@ -7,13 +7,11 @@ const CURB_W := 0.14
 
 static var _placed_road_aabbs: Array = []
 static var _road_collision_body: StaticBody3D = null
-static var _wall_seg_index: int = 0
 
 
 static func _reset_road_overlap_tracker() -> void:
 	_placed_road_aabbs.clear()
 	_road_collision_body = null
-	_wall_seg_index = 0
 
 
 static func build_racing_circuit(
@@ -35,21 +33,20 @@ static func build_racing_circuit(
 	_place_decal(track, kit, "roadStraightArrow.glb", Vector3(0, 0, -2), 0.0)
 
 	for i in range(1, north):
-		_tile(track, border, Vector3(0, 0, -i * tile), 0.0, false, tile, width, true, MeshFactory.ASPHALT, "racing")
-	_tile(track, border, Vector3(0, 0, -north * tile + tile), 0.0, true, tile, width, true, MeshFactory.ASPHALT, "racing")
+		_tile(track, border, Vector3(0, 0, -i * tile), 0.0, false, tile, width, true, MeshFactory.ASPHALT)
+	_tile(track, border, Vector3(0, 0, -north * tile + tile), 0.0, true, tile, width, true, MeshFactory.ASPHALT)
 	for i in range(east - 1):
-		_tile(track, border, Vector3(2.0 + i * tile, 0, -north * tile), -90.0, false, tile, width, true, MeshFactory.ASPHALT, "racing")
-	_tile(track, border, Vector3(2.0 + (east - 1) * tile, 0, -north * tile), -90.0, true, tile, width, true, MeshFactory.ASPHALT, "racing")
+		_tile(track, border, Vector3(2.0 + i * tile, 0, -north * tile), -90.0, false, tile, width, true, MeshFactory.ASPHALT)
+	_tile(track, border, Vector3(2.0 + (east - 1) * tile, 0, -north * tile), -90.0, true, tile, width, true, MeshFactory.ASPHALT)
 	var east_x := 2.0 + (east - 1) * tile
 	for i in range(south - 1):
-		_tile(track, border, Vector3(east_x, 0, -north * tile + tile + i * tile), 180.0, false, tile, width, true, MeshFactory.ASPHALT, "racing")
-	_tile(track, border, Vector3(east_x, 0, -north * tile + south * tile), 180.0, true, tile, width, true, MeshFactory.ASPHALT, "racing")
+		_tile(track, border, Vector3(east_x, 0, -north * tile + tile + i * tile), 180.0, false, tile, width, true, MeshFactory.ASPHALT)
+	_tile(track, border, Vector3(east_x, 0, -north * tile + south * tile), 180.0, true, tile, width, true, MeshFactory.ASPHALT)
 	for i in range(west - 1):
-		_tile(track, border, Vector3(east_x - tile - i * tile, 0, -north * tile + south * tile + tile), 90.0, false, tile, width, true, MeshFactory.ASPHALT, "racing")
-	_tile(track, border, Vector3(0, 0, -north * tile + south * tile + tile), 90.0, true, tile, width, true, MeshFactory.ASPHALT, "racing")
+		_tile(track, border, Vector3(east_x - tile - i * tile, 0, -north * tile + south * tile + tile), 90.0, false, tile, width, true, MeshFactory.ASPHALT)
+	_tile(track, border, Vector3(0, 0, -north * tile + south * tile + tile), 90.0, true, tile, width, true, MeshFactory.ASPHALT)
 
 	var layout: Dictionary = _preview_waypoint_layout(_racing_waypoints(tile, north, east, south, west), tile * 0.5)
-	_fence_racing(border, kit, tile, width, north, east)
 	_place_path_guides(track, layout, kit)
 	_fill_ground_excluding(fill, road.min_x - 28, road.max_x + 28, road.min_z - 28, road.max_z + 28, 1.0, road, kit + "grass.glb")
 	return Vector3(0.5, 0.0, -3.0)
@@ -104,7 +101,7 @@ static func build_city_circuit(
 	var width := 3.2
 	var waypoints: Array = _chamfer_waypoints(_city_street_waypoints(), 2.2)
 	var layout: Dictionary = _build_waypoint_circuit(
-		track, border, waypoints, tile, width, true, MeshFactory.ASPHALT, kit, "city"
+		track, border, waypoints, tile, width, true, MeshFactory.ASPHALT, kit
 	)
 	_place_path_guides(track, layout, kit)
 	MeshFactory.add_start_finish_line(
@@ -173,8 +170,7 @@ static func _build_waypoint_circuit(
 	width: float,
 	use_curbs: bool,
 	surface: Color,
-	kit: String = "",
-	edge_theme: String = "racing"
+	kit: String = ""
 ) -> Dictionary:
 	var samples: Array = []
 	if waypoints.is_empty():
@@ -207,7 +203,7 @@ static func _build_waypoint_circuit(
 			var anchor := a + dir * (seg_len * t0)
 			var center := a.lerp(b, (t0 + t1) * 0.5)
 			var is_corner := step == steps - 1 and rot != next_rot
-			_tile(track, border, anchor, rot, is_corner, tile, width, use_curbs, surface, edge_theme)
+			_tile(track, border, anchor, rot, is_corner, tile, width, use_curbs, surface)
 			samples.append(center)
 		samples.append(b)
 
@@ -346,7 +342,7 @@ static func build_nature_circuit(
 	var width := 2.6
 	var waypoints: Array = _chamfer_waypoints(_nature_trail_waypoints(), 1.6)
 	var layout: Dictionary = _build_waypoint_circuit(
-		track, border, waypoints, tile, width, false, MeshFactory.DIRT, "", "nature"
+		track, border, waypoints, tile, width, false, MeshFactory.DIRT, ""
 	)
 	_place_path_guides(track, layout, "", Color(0.92, 0.88, 0.72))
 	_fill_ground_excluding(
@@ -406,8 +402,7 @@ static func _tile(
 	tile: float,
 	width: float,
 	f1_curbs: bool,
-	surface_color: Color = MeshFactory.ASPHALT,
-	edge_theme: String = ""
+	surface_color: Color = MeshFactory.ASPHALT
 ) -> void:
 	var spec := _slab_spec(anchor, rotation_y_deg, is_corner, tile, width)
 	var covered := _road_already_covered(spec, rotation_y_deg)
@@ -418,8 +413,6 @@ static func _tile(
 	_add_slab_collision(track, spec, rotation_y_deg)
 	if not covered:
 		_register_road_aabb(spec, rotation_y_deg)
-		if edge_theme != "":
-			_place_edge_walls_for_spec(border, spec, rotation_y_deg, edge_theme)
 	if f1_curbs:
 		MeshFactory.add_track_line(track, spec.line_center, spec.line_size, rotation_y_deg)
 
@@ -478,91 +471,6 @@ static func _add_slab_collision(track: Node3D, spec: Dictionary, rot_y: float) -
 	collision.position = spec.center
 	collision.rotation_degrees.y = rot_y
 	_road_collision_body.add_child(collision)
-
-
-static func _place_edge_walls_for_spec(
-	border: Node3D,
-	spec: Dictionary,
-	rot: float,
-	theme: String
-) -> void:
-	const WALL_H := 0.72
-	const WALL_W := 0.2
-	const SHOULDER := 0.55
-	const RAIL_GAP := 0.45
-	var size: Vector3 = spec.size
-	var center: Vector3 = spec.center
-	var norm := int(rot) % 360
-	if norm < 0:
-		norm += 360
-	var road_half := size.x * 0.5
-	var long_len := size.z
-	if norm == 90 or norm == 270:
-		road_half = size.z * 0.5
-		long_len = size.x
-	var y := WALL_H * 0.5
-	var visual_out := road_half + SHOULDER + WALL_W * 0.5
-	var rail_out := visual_out + WALL_W * 0.5 + RAIL_GAP
-	var idx := _wall_seg_index
-	_wall_seg_index += 1
-
-	match norm:
-		0:
-			_place_side_wall(border, center + Vector3(-visual_out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, -1.0, false)
-			_place_side_wall(border, center + Vector3(visual_out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, 1.0, false)
-			_place_side_rail(border, center + Vector3(-rail_out, y, 0), Vector3(0.12, WALL_H, long_len), 0.0)
-			_place_side_rail(border, center + Vector3(rail_out, y, 0), Vector3(0.12, WALL_H, long_len), 0.0)
-		270:
-			_place_side_wall(border, center + Vector3(0, y, -visual_out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, -1.0, false)
-			_place_side_wall(border, center + Vector3(0, y, visual_out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, 1.0, false)
-			_place_side_rail(border, center + Vector3(0, y, -rail_out), Vector3(long_len, WALL_H, 0.12), 0.0)
-			_place_side_rail(border, center + Vector3(0, y, rail_out), Vector3(long_len, WALL_H, 0.12), 0.0)
-		180:
-			_place_side_wall(border, center + Vector3(visual_out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, -1.0, false)
-			_place_side_wall(border, center + Vector3(-visual_out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, 1.0, false)
-			_place_side_rail(border, center + Vector3(rail_out, y, 0), Vector3(0.12, WALL_H, long_len), 0.0)
-			_place_side_rail(border, center + Vector3(-rail_out, y, 0), Vector3(0.12, WALL_H, long_len), 0.0)
-		_:
-			_place_side_wall(border, center + Vector3(0, y, visual_out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, -1.0, false)
-			_place_side_wall(border, center + Vector3(0, y, -visual_out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, 1.0, false)
-			_place_side_rail(border, center + Vector3(0, y, rail_out), Vector3(long_len, WALL_H, 0.12), 0.0)
-			_place_side_rail(border, center + Vector3(0, y, -rail_out), Vector3(long_len, WALL_H, 0.12), 0.0)
-
-
-static func _place_side_rail(
-	border: Node3D,
-	center: Vector3,
-	size: Vector3,
-	rot: float
-) -> void:
-	MeshFactory.add_collision_box(border, center, size, rot)
-
-
-static func _place_side_wall(
-	border: Node3D,
-	center: Vector3,
-	size: Vector3,
-	rot: float,
-	theme: String,
-	index: int,
-	side: float,
-	with_collision: bool
-) -> void:
-	MeshFactory.add_surface_slab(
-		border, center, size, rot, _edge_wall_color(theme, index, side), with_collision
-	)
-
-
-static func _edge_wall_color(theme: String, index: int, side: float) -> Color:
-	match theme:
-		"nature":
-			return Color(0.4, 0.28, 0.16) if side > 0.0 else Color(0.48, 0.46, 0.4)
-		"city":
-			return Color(0.55, 0.56, 0.58)
-		_:
-			if index % 2 == 0:
-				return MeshFactory.CURB_RED if side > 0.0 else MeshFactory.CURB_WHITE
-			return MeshFactory.CURB_WHITE if side > 0.0 else MeshFactory.CURB_RED
 
 
 static func _slab_spec(anchor: Vector3, rot: float, corner: bool, tile: float, width: float) -> Dictionary:
@@ -653,28 +561,6 @@ static func _slab_spec_small(anchor: Vector3, rot: float, corner: bool, tile: fl
 				"line_center": anchor + Vector3(-0.5, SLAB_H + 0.015, -0.5),
 				"line_size": Vector3(tile, 0.02, 0.08),
 			}
-
-
-static func _fence_racing(
-	border: Node3D,
-	kit: String,
-	tile: float,
-	width: float,
-	north: int,
-	east: int
-) -> void:
-	var outer := width * 0.5 + 0.2
-	var cx := tile * 0.5
-	var north_end := -north * tile
-	var east_x := 2.0 + (east - 1) * tile
-	for z in range(0, int(north_end) - 1, -int(tile)):
-		_place_decal(border, kit, "fenceStraight.glb", Vector3(cx + outer, 0, z), 0.0)
-	for x in range(2, int(east_x) + 1, int(tile)):
-		_place_decal(border, kit, "fenceStraight.glb", Vector3(x, 0, north_end - outer + 0.5), 90.0)
-	for z in range(0, int(north_end) - 1, -int(tile)):
-		_place_decal(border, kit, "fenceStraight.glb", Vector3(east_x + outer - 0.5, 0, z), 0.0)
-	for x in range(int(east_x) - 1, -1, -int(tile)):
-		_place_decal(border, kit, "fenceStraight.glb", Vector3(x, 0, north_end + tile + outer - 0.5), 90.0)
 
 
 static func _fill_ground_excluding(

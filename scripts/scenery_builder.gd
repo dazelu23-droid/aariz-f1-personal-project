@@ -178,7 +178,6 @@ static func populate_nature(props: Node3D, nature: String) -> void:
 	)
 	_place_nature_backdrop(props, nature, road)
 	_place_nature_trees(props, nature, road, samples)
-	_place_nature_rock_borders(props, nature, samples, road)
 
 
 static func _place_nature_trees(props: Node3D, nature: String, road: Dictionary, samples: Array) -> void:
@@ -198,31 +197,6 @@ static func _place_nature_trees(props: Node3D, nature: String, road: Dictionary,
 			if (x + z) % 3 != 0:
 				continue
 			_place(props, nature, tree_models[idx % tree_models.size()], pos, float(idx) * 29.0)
-			idx += 1
-
-
-static func _place_nature_rock_borders(props: Node3D, nature: String, samples: Array, road: Dictionary) -> void:
-	if samples.size() < 2:
-		return
-	var rock_models := [
-		"rock_largeA.fbx", "rock_largeB.fbx", "rock_largeC.fbx",
-		"rock_smallA.fbx", "rock_smallB.fbx", "rock_smallC.fbx",
-	]
-	var idx := 0
-	for i in range(0, samples.size() - 1, 1):
-		var a: Vector3 = samples[i]
-		var b: Vector3 = samples[i + 1]
-		if a.distance_squared_to(b) < 0.02:
-			continue
-		var dir := (b - a).normalized()
-		var perp := Vector3(-dir.z, 0.0, dir.x)
-		for side: float in [-1.0, 1.0]:
-			var p: Vector3 = a.lerp(b, 0.5) + perp * side * 3.8
-			if _on_road_expanded(p, road, 2.0):
-				continue
-			if _near_path(p, samples, 2.4):
-				continue
-			_place(props, nature, rock_models[idx % rock_models.size()], p, float(idx) * 41.0)
 			idx += 1
 
 
