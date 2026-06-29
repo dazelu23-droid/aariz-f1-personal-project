@@ -221,8 +221,8 @@ static func _place_nature_rock_borders(props: Node3D, nature: String, samples: A
 			continue
 		var dir := (b - a).normalized()
 		var perp := Vector3(-dir.z, 0.0, dir.x)
-		for side in [-1.0, 1.0]:
-			var p := a.lerp(b, 0.5) + perp * side * 3.8
+		for side: float in [-1.0, 1.0]:
+			var p: Vector3 = a.lerp(b, 0.5) + perp * side * 3.8
 			if _on_road_expanded(p, road, 2.0):
 				continue
 			if _near_path(p, samples, 2.4):
