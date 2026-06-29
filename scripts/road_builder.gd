@@ -414,9 +414,10 @@ static func _tile(
 	MeshFactory.add_surface_slab(
 		track, spec.center, spec.size, rotation_y_deg, surface_color, false
 	)
+	# Always add collision so overlapping visual tiles never leave driveable gaps.
+	_add_slab_collision(track, spec, rotation_y_deg)
 	if not covered:
 		_register_road_aabb(spec, rotation_y_deg)
-		_add_slab_collision(track, spec, rotation_y_deg)
 		if edge_theme != "":
 			_place_edge_walls_for_spec(border, spec, rotation_y_deg, edge_theme)
 	if f1_curbs:

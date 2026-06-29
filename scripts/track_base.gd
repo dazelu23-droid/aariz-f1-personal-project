@@ -73,7 +73,11 @@ func get_horizon_color() -> Color:
 func _set_spawn(local_pos: Vector3, face_negative_z: bool = true) -> void:
 	var s := get_world_scale()
 	var centered := local_pos + get_track_center_offset()
-	spawn_point.position = Vector3(centered.x * s, local_pos.y, centered.z * s)
+	# Road slabs live on track_root (scaled); car sits on TrackBase in world space.
+	const ROAD_TOP_LOCAL := 0.14
+	const CAR_BOTTOM_OFFSET := 0.05
+	var road_y := ROAD_TOP_LOCAL * s + CAR_BOTTOM_OFFSET
+	spawn_point.position = Vector3(centered.x * s, road_y, centered.z * s)
 	spawn_point.rotation_degrees.y = 0.0 if face_negative_z else 180.0
 
 
