@@ -32,11 +32,16 @@ func get_ground_color() -> Color:
 func get_ground_size() -> float:
 	var layout: Dictionary = _RoadBuilder.get_city_layout()
 	var bounds: Dictionary = layout.bounds
-	return maxf(bounds.max_x - bounds.min_x, bounds.max_z - bounds.min_z) + 120.0
+	return maxf(bounds.max_x - bounds.min_x, bounds.max_z - bounds.min_z) + 180.0
+
+
+func get_horizon_color() -> Color:
+	return Color(0.24, 0.26, 0.3)
 
 
 func _add_track_ground() -> void:
 	var ground := MeshFactory.add_ground(self, get_ground_color(), get_ground_size())
+	MeshFactory.add_horizon_skirt(self, get_horizon_color(), get_ground_size() * 1.35)
 	MeshFactory.add_surface_slab(
 		self,
 		Vector3(0, -0.15, 0),

@@ -90,6 +90,31 @@ static func add_ground(parent: Node3D, color: Color, size: float, height: float 
 	return body
 
 
+static func add_horizon_skirt(parent: Node3D, color: Color, ground_size: float) -> void:
+	var skirt_h := 72.0
+	var skirt_thick := 48.0
+	var half := ground_size * 0.5
+	var y := skirt_h * 0.5 - 8.0
+	var edges := [
+		{"center": Vector3(0.0, y, -half - skirt_thick * 0.5), "size": Vector3(ground_size + skirt_thick * 2.0, skirt_h, skirt_thick)},
+		{"center": Vector3(0.0, y, half + skirt_thick * 0.5), "size": Vector3(ground_size + skirt_thick * 2.0, skirt_h, skirt_thick)},
+		{"center": Vector3(-half - skirt_thick * 0.5, y, 0.0), "size": Vector3(skirt_thick, skirt_h, ground_size)},
+		{"center": Vector3(half + skirt_thick * 0.5, y, 0.0), "size": Vector3(skirt_thick, skirt_h, ground_size)},
+	]
+	for edge in edges:
+		_add_colored_box(parent, edge.center, edge.size, 0.0, color, false)
+
+
+static func add_visual_marker(
+	parent: Node3D,
+	center: Vector3,
+	size: Vector3,
+	rotation_y_deg: float,
+	color: Color
+) -> void:
+	_add_colored_box(parent, center, size, rotation_y_deg, color, false)
+
+
 static func add_asphalt_slab(
 	parent: Node3D,
 	center: Vector3,
@@ -166,6 +191,7 @@ static func _add_colored_box(
 	mat.roughness = 0.82
 	mat.metallic = 0.04
 	mat.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	mesh_instance.material_override = mat
 	body.add_child(mesh_instance)
 

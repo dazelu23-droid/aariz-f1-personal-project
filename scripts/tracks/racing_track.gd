@@ -29,6 +29,10 @@ func get_ground_size() -> float:
 	return 300.0
 
 
+func get_horizon_color() -> Color:
+	return Color(0.18, 0.4, 0.22)
+
+
 func _add_track_ground() -> void:
 	MeshFactory.add_ground(self, get_ground_color(), get_ground_size())
 

@@ -38,8 +38,25 @@ static func build_racing_circuit(
 	_tile(track, border, Vector3(0, 0, -north * tile + south * tile + tile), 90.0, true, tile, width, true)
 
 	_fence_racing(border, kit, tile, width, north, east)
-	_fill_ground_excluding(fill, road.min_x - 8, road.max_x + 8, road.min_z - 8, road.max_z + 8, 1.0, road, kit + "grass.glb")
+	var layout: Dictionary = _preview_waypoint_layout(_racing_waypoints(tile, north, east, south, west), tile * 0.5)
+	_place_path_guides(track, layout, kit)
+	_place_visual_barriers(border, layout, width, kit, 2.0)
+	_fill_ground_excluding(fill, road.min_x - 28, road.max_x + 28, road.min_z - 28, road.max_z + 28, 1.0, road, kit + "grass.glb")
 	return Vector3(0.5, 0.0, -3.0)
+
+
+static func _racing_waypoints(tile: float, north: int, east: int, south: int, west: int) -> Array:
+	var north_end := -north * tile
+	var east_x := 2.0 + (east - 1) * tile
+	var south_end := -north * tile + south * tile + tile
+	return [
+		Vector3(0.5, 0, -1.0),
+		Vector3(0.5, 0, north_end + 0.5),
+		Vector3(east_x + 0.5, 0, north_end + 0.5),
+		Vector3(east_x + 0.5, 0, south_end + 0.5),
+		Vector3(0.5, 0, south_end + 0.5),
+		Vector3(0.5, 0, -1.0),
+	]
 
 
 static func get_racing_layout() -> Dictionary:
@@ -74,19 +91,21 @@ static func build_city_circuit(
 ) -> Vector3:
 	var tile := 2.0
 	var width := 3.2
-	var waypoints: Array = _city_street_waypoints()
+	var waypoints: Array = _chamfer_waypoints(_city_street_waypoints(), 2.2)
 	var layout: Dictionary = _build_waypoint_circuit(
 		track, border, waypoints, tile, width, true, MeshFactory.ASPHALT, kit
 	)
+	_place_path_guides(track, layout, kit)
+	_place_visual_barriers(border, layout, width, kit, 2.15)
 	MeshFactory.add_start_finish_line(
 		track, waypoints[0] + Vector3(0.5, SLAB_H + 0.02, -1.6), width
 	)
 	_fill_ground_excluding(
 		fill,
-		layout.bounds.min_x - 20,
-		layout.bounds.max_x + 20,
-		layout.bounds.min_z - 20,
-		layout.bounds.max_z + 20,
+		layout.bounds.min_x - 36,
+		layout.bounds.max_x + 36,
+		layout.bounds.min_z - 36,
+		layout.bounds.max_z + 36,
 		2.0,
 		layout.bounds,
 		"",
@@ -96,7 +115,7 @@ static func build_city_circuit(
 
 
 static func get_city_layout() -> Dictionary:
-	return _preview_waypoint_layout(_city_street_waypoints(), 2.0)
+	return _preview_waypoint_layout(_chamfer_waypoints(_city_street_waypoints(), 2.2), 2.0)
 
 
 static func _city_street_waypoints() -> Array:
@@ -164,18 +183,92 @@ static func _build_waypoint_circuit(
 			continue
 		var dir := delta / seg_len
 		var rot := _direction_to_rot(dir)
+		var next_rot := rot
+		if seg_idx < waypoints.size() - 2:
+			var nb: Vector3 = waypoints[seg_idx + 2]
+			var nd := nb - b
+			if nd.length_squared() > 0.01:
+				next_rot = _direction_to_rot(nd.normalized())
 		var steps := maxi(1, int(round(seg_len / tile)))
 		for step in range(steps):
 			var t0 := float(step) / float(steps)
 			var t1 := float(step + 1) / float(steps)
 			var anchor := a + dir * (seg_len * t0)
 			var center := a.lerp(b, (t0 + t1) * 0.5)
-			var is_corner := seg_idx > 0 and step == 0
+			var is_corner := step == steps - 1 and rot != next_rot
 			_tile(track, border, anchor, rot, is_corner, tile, width, use_curbs, surface)
 			samples.append(center)
 		samples.append(b)
 
 	return _layout_from_samples(samples, tile)
+
+
+static func _place_path_guides(
+	track: Node3D,
+	layout: Dictionary,
+	kit: String,
+	line_color: Color = MeshFactory.LINE_WHITE
+) -> void:
+	var samples: Array = layout.get("samples", [])
+	if samples.size() < 2:
+		return
+	var marker_idx := 0
+	for i in range(0, samples.size() - 1, 2):
+		var a: Vector3 = samples[i]
+		var b: Vector3 = samples[i + 1]
+		if a.distance_squared_to(b) < 0.02:
+			continue
+		var dir := (b - a).normalized()
+		var rot := _direction_to_rot(dir)
+		var p := a.lerp(b, 0.5)
+		MeshFactory.add_visual_marker(
+			track,
+			p + Vector3(0.0, SLAB_H + 0.018, 0.0),
+			Vector3(0.12, 0.02, 0.55),
+			rot,
+			line_color
+		)
+		if kit != "" and marker_idx % 3 == 0:
+			_place_decal(track, kit, "roadStraightArrow.glb", p, rot)
+		marker_idx += 1
+
+
+static func _place_visual_barriers(
+	border: Node3D,
+	layout: Dictionary,
+	width: float,
+	kit: String,
+	offset: float
+) -> void:
+	var samples: Array = layout.get("samples", [])
+	for i in range(0, maxi(0, samples.size() - 1), 1):
+		var a: Vector3 = samples[i]
+		var b: Vector3 = samples[i + 1]
+		if a.distance_squared_to(b) < 0.02:
+			continue
+		var dir := (b - a).normalized()
+		var perp := Vector3(-dir.z, 0.0, dir.x)
+		var rot := _direction_to_rot(dir)
+		var p := a.lerp(b, 0.5)
+		var side := width * 0.5 + offset
+		var left := p + perp * side
+		var right := p - perp * side
+		if kit == "":
+			var log_color := Color(0.42, 0.3, 0.18)
+			var stone_color := Color(0.52, 0.5, 0.46)
+			var marker := log_color if i % 2 == 0 else stone_color
+			MeshFactory.add_visual_marker(
+				border, left + Vector3(0.0, 0.07, 0.0), Vector3(0.28, 0.14, 0.85), rot, marker
+			)
+			MeshFactory.add_visual_marker(
+				border, right + Vector3(0.0, 0.07, 0.0), Vector3(0.28, 0.14, 0.85), rot, marker
+			)
+		elif i % 2 == 0:
+			_place_kit_road(border, kit, "barrierRed.glb", left, rot, false)
+			_place_kit_road(border, kit, "barrierWhite.glb", right, rot, false)
+		else:
+			_place_kit_road(border, kit, "fenceStraight.glb", left, rot, false)
+			_place_kit_road(border, kit, "fenceStraight.glb", right, rot, false)
 
 
 static func _preview_waypoint_layout(waypoints: Array, tile: float) -> Dictionary:
@@ -238,16 +331,18 @@ static func build_nature_circuit(
 ) -> Vector3:
 	var tile := 1.25
 	var width := 2.6
-	var waypoints: Array = _nature_trail_waypoints()
+	var waypoints: Array = _chamfer_waypoints(_nature_trail_waypoints(), 1.6)
 	var layout: Dictionary = _build_waypoint_circuit(
 		track, border, waypoints, tile, width, false, MeshFactory.DIRT
 	)
+	_place_path_guides(track, layout, "", Color(0.92, 0.88, 0.72))
+	_place_visual_barriers(border, layout, width, "", 1.8)
 	_fill_ground_excluding(
 		fill,
-		layout.bounds.min_x - 16,
-		layout.bounds.max_x + 16,
-		layout.bounds.min_z - 16,
-		layout.bounds.max_z + 16,
+		layout.bounds.min_x - 28,
+		layout.bounds.max_x + 28,
+		layout.bounds.min_z - 28,
+		layout.bounds.max_z + 28,
 		1.0,
 		layout.bounds,
 		nature + "ground_grass.fbx"
@@ -256,9 +351,38 @@ static func build_nature_circuit(
 
 
 static func get_nature_layout() -> Dictionary:
-	var layout: Dictionary = _preview_waypoint_layout(_nature_trail_waypoints(), 1.25)
+	var layout: Dictionary = _preview_waypoint_layout(_chamfer_waypoints(_nature_trail_waypoints(), 1.6), 1.25)
 	layout["width"] = 2.6
 	return layout
+
+
+static func _chamfer_waypoints(points: Array, radius: float) -> Array:
+	if points.size() < 3:
+		return points.duplicate()
+	var out: Array = []
+	for i in range(points.size() - 1):
+		var a: Vector3 = points[i]
+		var b: Vector3 = points[i + 1]
+		if i == 0:
+			out.append(a)
+		if i >= points.size() - 2:
+			out.append(b)
+			continue
+		var c: Vector3 = points[i + 2]
+		var v1 := (b - a).normalized()
+		var v2 := (c - b).normalized()
+		if absf(v1.dot(v2)) > 0.92:
+			out.append(b)
+			continue
+		var r := minf(radius, a.distance_to(b) * 0.42, b.distance_to(c) * 0.42)
+		out.append(b - v1 * r)
+		for step in range(1, 4):
+			var t := float(step) / 4.0
+			var p1 := b - v1 * r
+			var p2 := b + v2 * r
+			out.append(p1.lerp(p2, t).lerp(b, 1.0 - absf(t - 0.5) * 1.6))
+		out.append(b + v2 * r)
+	return out
 
 
 static func _tile(

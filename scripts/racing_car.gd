@@ -1,19 +1,19 @@
 extends RigidBody3D
 
 const MAX_SPEED := 62.0
-const ACCELERATION := 28.0
-const BRAKE_FORCE := 65.0
-const STEER_SPEED := 3.6
-const GRIP := 0.94
-const COAST_DRAG := 0.992
-
-var _speed := 0.0
+const MAX_REVERSE_SPEED := 24.0
+const ACCELERATION := 30.0
+const REVERSE_ACCEL := 22.0
+const BRAKE_FORCE := 70.0
+const STEER_SPEED := 5.4
+const GRIP := 0.96
+const COAST_DRAG := 0.993
 
 
 func _ready() -> void:
 	gravity_scale = 1.0
-	linear_damp = 0.05
-	angular_damp = 1.4
+	linear_damp = 0.04
+	angular_damp = 1.1
 	contact_monitor = true
 	max_contacts_reported = 4
 	sleeping = false
@@ -33,25 +33,40 @@ func _physics_process(delta: float) -> void:
 	forward = forward.normalized()
 
 	var horizontal_velocity := Vector3(linear_velocity.x, 0.0, linear_velocity.z)
-	_speed = horizontal_velocity.length()
+	var speed := horizontal_velocity.length()
+	var forward_speed := horizontal_velocity.dot(forward)
+	var is_reversing := forward_speed < -0.8
 
 	if throttle > 0.0:
-		apply_central_force(forward * ACCELERATION * throttle * mass)
+		if is_reversing:
+			apply_central_force(forward * BRAKE_FORCE * throttle * mass)
+		else:
+			apply_central_force(forward * ACCELERATION * throttle * mass)
 	elif throttle < 0.0:
-		apply_central_force(forward * BRAKE_FORCE * throttle * mass)
+		if forward_speed > 1.2:
+			apply_central_force(forward * BRAKE_FORCE * throttle * mass)
+		else:
+			apply_central_force(-forward * REVERSE_ACCEL * absf(throttle) * mass)
 
-	if _speed > 1.5 and absf(steer) > 0.01:
-		var steer_factor := clampf(_speed / MAX_SPEED, 0.4, 1.0)
-		apply_torque(Vector3.UP * steer * STEER_SPEED * steer_factor * mass * delta * 60.0)
+	if speed > 0.8 and absf(steer) > 0.01:
+		var low_speed_boost := clampf(1.35 - speed / MAX_SPEED * 0.45, 0.72, 1.35)
+		var reverse_steer := 1.15 if is_reversing else 1.0
+		apply_torque(
+			Vector3.UP * steer * STEER_SPEED * low_speed_boost * reverse_steer * mass * delta * 60.0
+		)
 
-	if _speed > MAX_SPEED:
-		var capped := horizontal_velocity.normalized() * MAX_SPEED
+	if forward_speed > MAX_SPEED:
+		var capped := forward * MAX_SPEED + horizontal_velocity - forward * forward_speed
+		linear_velocity.x = capped.x
+		linear_velocity.z = capped.z
+	elif forward_speed < -MAX_REVERSE_SPEED:
+		var capped := forward * -MAX_REVERSE_SPEED + horizontal_velocity - forward * forward_speed
 		linear_velocity.x = capped.x
 		linear_velocity.z = capped.z
 
-	if _speed > 1.0:
-		var target_velocity := forward * _speed
-		var blended := horizontal_velocity.lerp(target_velocity, GRIP * delta * 14.0)
+	if speed > 1.0 and not is_reversing:
+		var target_velocity := forward * forward_speed
+		var blended := horizontal_velocity.lerp(target_velocity, GRIP * delta * 15.0)
 		linear_velocity.x = blended.x
 		linear_velocity.z = blended.z
 

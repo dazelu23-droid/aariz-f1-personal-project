@@ -4,12 +4,22 @@ extends RefCounted
 
 static func populate_racing(props: Node3D, kit: String) -> void:
 	var road: Dictionary = RoadBuilder.get_racing_layout()["bounds"]
-	_fill_grid(props, kit + "grass.glb", road.min_x - 6, road.max_x + 6, road.min_z - 6, road.max_z + 6, 1.2, road)
+	_fill_grid(props, kit + "grass.glb", road.min_x - 22, road.max_x + 22, road.min_z - 22, road.max_z + 22, 1.2, road)
+	_place_racing_backdrop(props, kit, road)
 	_place_start_line(props, kit, road)
 	_place_pit_complex(props, kit, road)
 	_place_grandstands(props, kit, road)
 	_place_corners(props, kit, road)
 	_place_back_straight(props, kit, road)
+
+
+static func _place_racing_backdrop(props: Node3D, kit: String, road: Dictionary) -> void:
+	for x in range(int(road.min_x) - 14, int(road.max_x) + 16, 2):
+		_place_if_clear(props, kit, "treeLarge.glb", Vector3(x, 0, road.min_z - 16), 0.0, road, 8.0)
+		_place_if_clear(props, kit, "treeSmall.glb", Vector3(x, 0, road.max_z + 16), 180.0, road, 8.0)
+	for z in range(int(road.min_z) - 14, int(road.max_z) + 16, 2):
+		_place_if_clear(props, kit, "treeLarge.glb", Vector3(road.min_x - 16, 0, z), 90.0, road, 8.0)
+		_place_if_clear(props, kit, "treeSmall.glb", Vector3(road.max_x + 16, 0, z), -90.0, road, 8.0)
 
 
 static func populate_city(props: Node3D, roads: String, buildings: String, _racing_kit: String = "") -> void:
@@ -164,18 +174,23 @@ static func populate_nature(props: Node3D, nature: String) -> void:
 	_fill_grid(
 		props,
 		nature + "ground_grass.fbx",
-		road.min_x - 10,
-		road.max_x + 10,
-		road.min_z - 10,
-		road.max_z + 10,
+		road.min_x - 24,
+		road.max_x + 24,
+		road.min_z - 24,
+		road.max_z + 24,
 		1.0,
 		road
 	)
+	_place_nature_backdrop(props, nature, road)
+	_place_nature_trees(props, nature, road, samples)
+	_place_nature_rock_borders(props, nature, samples, road)
 
-	var min_x := int(road.min_x) - 8
-	var max_x := int(road.max_x) + 8
-	var min_z := int(road.min_z) - 8
-	var max_z := int(road.max_z) + 8
+
+static func _place_nature_trees(props: Node3D, nature: String, road: Dictionary, samples: Array) -> void:
+	var min_x := int(road.min_x) - 10
+	var max_x := int(road.max_x) + 10
+	var min_z := int(road.min_z) - 10
+	var max_z := int(road.max_z) + 10
 	var tree_models := ["tree_default.fbx", "tree_pineDefaultA.fbx", "tree_oak.fbx", "tree_cone.fbx"]
 	var idx := 0
 	for x in range(min_x, max_x, 2):
@@ -183,23 +198,48 @@ static func populate_nature(props: Node3D, nature: String) -> void:
 			var pos := Vector3(x, 0, z)
 			if _on_road_expanded(pos, road, 2.5):
 				continue
-			if samples.size() > 1 and _near_path(pos, samples, 3.0):
+			if samples.size() > 1 and _near_path(pos, samples, 3.2):
 				continue
 			if (x + z) % 3 != 0:
 				continue
 			_place(props, nature, tree_models[idx % tree_models.size()], pos, float(idx) * 29.0)
 			idx += 1
 
-	var rock_spots := [
-		Vector3(road.min_x - 2, 0, road.min_z + 2),
-		Vector3(road.max_x + 1, 0, road.min_z + 1),
-		Vector3(road.max_x, 0, road.max_z + 2),
-		Vector3(road.min_x - 1, 0, road.max_z),
+
+static func _place_nature_rock_borders(props: Node3D, nature: String, samples: Array, road: Dictionary) -> void:
+	if samples.size() < 2:
+		return
+	var rock_models := [
+		"rock_largeA.fbx", "rock_largeB.fbx", "rock_largeC.fbx",
+		"rock_smallA.fbx", "rock_smallB.fbx", "rock_smallC.fbx",
 	]
-	for i in rock_spots.size():
-		var rock_pos: Vector3 = rock_spots[i]
-		if not _on_road_expanded(rock_pos, road, 2.5) and not _near_path(rock_pos, samples, 3.0):
-			_place(props, nature, "rock_largeA.fbx" if i % 2 == 0 else "rock_largeC.fbx", rock_pos, float(i) * 45.0)
+	var idx := 0
+	for i in range(0, samples.size() - 1, 1):
+		var a: Vector3 = samples[i]
+		var b: Vector3 = samples[i + 1]
+		if a.distance_squared_to(b) < 0.02:
+			continue
+		var dir := (b - a).normalized()
+		var perp := Vector3(-dir.z, 0.0, dir.x)
+		for side in [-1.0, 1.0]:
+			var p := a.lerp(b, 0.5) + perp * side * 3.8
+			if _on_road_expanded(p, road, 2.0):
+				continue
+			if _near_path(p, samples, 2.4):
+				continue
+			_place(props, nature, rock_models[idx % rock_models.size()], p, float(idx) * 41.0)
+			idx += 1
+
+
+static func _place_nature_backdrop(props: Node3D, nature: String, road: Dictionary) -> void:
+	var tree_models := ["tree_pineDefaultA.fbx", "tree_oak.fbx", "tree_default.fbx"]
+	var pad := 18.0
+	for x in range(int(road.min_x) - 12, int(road.max_x) + 14, 3):
+		_place(props, nature, tree_models[abs(x) % tree_models.size()], Vector3(x, 0, road.min_z - pad), float(x))
+		_place(props, nature, tree_models[(abs(x) + 1) % tree_models.size()], Vector3(x, 0, road.max_z + pad), float(x) + 90.0)
+	for z in range(int(road.min_z) - 12, int(road.max_z) + 14, 3):
+		_place(props, nature, tree_models[abs(z) % tree_models.size()], Vector3(road.min_x - pad, 0, z), float(z))
+		_place(props, nature, tree_models[(abs(z) + 2) % tree_models.size()], Vector3(road.max_x + pad, 0, z), float(z) + 45.0)
 
 
 static func _place_start_line(props: Node3D, kit: String, road: Dictionary) -> void:

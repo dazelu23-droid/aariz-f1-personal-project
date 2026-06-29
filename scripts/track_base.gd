@@ -61,7 +61,13 @@ func _apply_world_scale() -> void:
 
 
 func _add_track_ground() -> void:
-	MeshFactory.add_ground(self, get_ground_color(), get_ground_size())
+	var size := get_ground_size()
+	MeshFactory.add_ground(self, get_ground_color(), size)
+	MeshFactory.add_horizon_skirt(self, get_horizon_color(), size * 1.35)
+
+
+func get_horizon_color() -> Color:
+	return get_ground_color().lerp(Color(0.45, 0.5, 0.55), 0.25)
 
 
 func _set_spawn(local_pos: Vector3, face_negative_z: bool = true) -> void:
