@@ -414,15 +414,15 @@ static func _tile(
 ) -> void:
 	var spec := _slab_spec(anchor, rotation_y_deg, is_corner, tile, width)
 	var covered := _road_already_covered(spec, rotation_y_deg)
+	MeshFactory.add_surface_slab(
+		track, spec.center, spec.size, rotation_y_deg, surface_color, false
+	)
 	if not covered:
-		MeshFactory.add_surface_slab(
-			track, spec.center, spec.size, rotation_y_deg, surface_color, false
-		)
 		_register_road_aabb(spec, rotation_y_deg)
-		if f1_curbs:
-			MeshFactory.add_track_line(track, spec.line_center, spec.line_size, rotation_y_deg)
 		if edge_theme != "":
 			_place_edge_walls_for_spec(border, spec, rotation_y_deg, edge_theme)
+	if f1_curbs:
+		MeshFactory.add_track_line(track, spec.line_center, spec.line_size, rotation_y_deg)
 	_stamp_road_cells(spec, rotation_y_deg, surface_color)
 
 
@@ -567,28 +567,28 @@ static func _slab_spec_large(anchor: Vector3, rot: float, corner: bool, tile: fl
 		0:
 			return {
 				"center": anchor + Vector3(0.5, SLAB_H * 0.5, -1.0),
-				"size": Vector3(width, SLAB_H, tile + 0.08),
+				"size": Vector3(width, SLAB_H, tile + 0.16),
 				"line_center": anchor + Vector3(0.5, SLAB_H + 0.015, -1.0),
 				"line_size": Vector3(0.1, 0.02, tile),
 			}
 		270:
 			return {
 				"center": anchor + Vector3(1.0, SLAB_H * 0.5, -0.5),
-				"size": Vector3(tile + 0.08, SLAB_H, width),
+				"size": Vector3(tile + 0.16, SLAB_H, width),
 				"line_center": anchor + Vector3(1.0, SLAB_H + 0.015, -0.5),
 				"line_size": Vector3(tile, 0.02, 0.1),
 			}
 		180:
 			return {
 				"center": anchor + Vector3(0.5, SLAB_H * 0.5, 1.0),
-				"size": Vector3(width, SLAB_H, tile + 0.08),
+				"size": Vector3(width, SLAB_H, tile + 0.16),
 				"line_center": anchor + Vector3(0.5, SLAB_H + 0.015, 1.0),
 				"line_size": Vector3(0.1, 0.02, tile),
 			}
 		_:
 			return {
 				"center": anchor + Vector3(-1.0, SLAB_H * 0.5, -0.5),
-				"size": Vector3(tile + 0.08, SLAB_H, width),
+				"size": Vector3(tile + 0.16, SLAB_H, width),
 				"line_center": anchor + Vector3(-1.0, SLAB_H + 0.015, -0.5),
 				"line_size": Vector3(tile, 0.02, 0.1),
 			}
@@ -609,28 +609,28 @@ static func _slab_spec_small(anchor: Vector3, rot: float, corner: bool, tile: fl
 		0:
 			return {
 				"center": anchor + Vector3(0.5, SLAB_H * 0.5, -0.5),
-				"size": Vector3(width, SLAB_H, tile + 0.06),
+				"size": Vector3(width, SLAB_H, tile + 0.12),
 				"line_center": anchor + Vector3(0.5, SLAB_H + 0.015, -0.5),
 				"line_size": Vector3(0.08, 0.02, tile),
 			}
 		270:
 			return {
 				"center": anchor + Vector3(0.5, SLAB_H * 0.5, -0.5),
-				"size": Vector3(tile + 0.06, SLAB_H, width),
+				"size": Vector3(tile + 0.12, SLAB_H, width),
 				"line_center": anchor + Vector3(0.5, SLAB_H + 0.015, -0.5),
 				"line_size": Vector3(tile, 0.02, 0.08),
 			}
 		180:
 			return {
 				"center": anchor + Vector3(0.5, SLAB_H * 0.5, 0.5),
-				"size": Vector3(width, SLAB_H, tile + 0.06),
+				"size": Vector3(width, SLAB_H, tile + 0.12),
 				"line_center": anchor + Vector3(0.5, SLAB_H + 0.015, 0.5),
 				"line_size": Vector3(0.08, 0.02, tile),
 			}
 		_:
 			return {
 				"center": anchor + Vector3(-0.5, SLAB_H * 0.5, -0.5),
-				"size": Vector3(tile + 0.06, SLAB_H, width),
+				"size": Vector3(tile + 0.12, SLAB_H, width),
 				"line_center": anchor + Vector3(-0.5, SLAB_H + 0.015, -0.5),
 				"line_size": Vector3(tile, 0.02, 0.08),
 			}
