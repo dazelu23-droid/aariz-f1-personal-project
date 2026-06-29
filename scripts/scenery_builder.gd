@@ -30,7 +30,6 @@ static func populate_city(props: Node3D, roads: String, buildings: String, _raci
 
 
 static func _place_city_canyon_walls(props: Node3D, buildings: String, layout: Dictionary) -> void:
-	var road: Dictionary = layout.bounds
 	var samples: Array = layout.get("samples", [])
 	var wall_gap := 5.5
 	var far_gap := 8.0
@@ -51,10 +50,10 @@ static func _place_city_canyon_walls(props: Node3D, buildings: String, layout: D
 		for step in range(steps + 1):
 			var t := float(step) / float(steps)
 			var p := a.lerp(b, t)
-			_place_city_building_safe(props, buildings, p + perp * wall_gap, idx, road, false, samples, false)
-			_place_city_building_safe(props, buildings, p - perp * wall_gap, idx + 1, road, false, samples, false)
-			_place_city_building_safe(props, buildings, p + perp * far_gap, idx + 2, road, true, samples, false)
-			_place_city_building_safe(props, buildings, p - perp * far_gap, idx + 3, road, true, samples, false)
+			_place_city_building_safe(props, buildings, p + perp * wall_gap, idx, samples, false)
+			_place_city_building_safe(props, buildings, p - perp * wall_gap, idx + 1, samples, false)
+			_place_city_building_safe(props, buildings, p + perp * far_gap, idx + 2, samples, true)
+			_place_city_building_safe(props, buildings, p - perp * far_gap, idx + 3, samples, true)
 			idx += 4
 
 
@@ -63,14 +62,10 @@ static func _place_city_building_safe(
 	buildings: String,
 	pos: Vector3,
 	idx: int,
-	road: Dictionary,
-	tall: bool = false,
-	samples: Array = [],
-	check_path: bool = true
+	samples: Array,
+	tall: bool = false
 ) -> void:
-	if _on_road_expanded(pos, road, 4.5):
-		return
-	if check_path and samples.size() > 1 and _near_path(pos, samples, 4.0):
+	if samples.size() > 1 and _near_path(pos, samples, 5.2 if tall else 4.2):
 		return
 	_place_city_building(props, buildings, pos, idx, tall)
 

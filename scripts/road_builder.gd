@@ -96,7 +96,6 @@ static func build_city_circuit(
 		track, border, waypoints, tile, width, true, MeshFactory.ASPHALT, kit
 	)
 	_place_path_guides(track, layout, kit)
-	_place_visual_barriers(border, layout, width, kit, 2.15)
 	MeshFactory.add_start_finish_line(
 		track, waypoints[0] + Vector3(0.5, SLAB_H + 0.02, -1.6), width
 	)
