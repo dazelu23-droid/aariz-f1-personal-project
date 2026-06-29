@@ -146,6 +146,26 @@ static func add_curb(
 	return _add_colored_box(parent, center, size, rotation_y_deg, color, with_collision)
 
 
+static func add_collision_box(
+	parent: Node3D,
+	center: Vector3,
+	size: Vector3,
+	rotation_y_deg: float = 0.0
+) -> StaticBody3D:
+	var body := StaticBody3D.new()
+	body.collision_layer = 1
+	body.collision_mask = 0
+	body.position = center
+	body.rotation_degrees.y = rotation_y_deg
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collision.shape = shape
+	body.add_child(collision)
+	parent.add_child(body)
+	return body
+
+
 static func add_merged_road_collision(
 	parent: Node3D,
 	cells: Dictionary,

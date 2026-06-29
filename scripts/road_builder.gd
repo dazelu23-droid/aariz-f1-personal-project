@@ -6,13 +6,13 @@ const CURB_H := 0.076
 const CURB_W := 0.14
 
 static var _placed_road_aabbs: Array = []
-static var _road_cells: Dictionary = {}
+static var _road_collision_body: StaticBody3D = null
 static var _wall_seg_index: int = 0
 
 
 static func _reset_road_overlap_tracker() -> void:
 	_placed_road_aabbs.clear()
-	_road_cells.clear()
+	_road_collision_body = null
 	_wall_seg_index = 0
 
 
@@ -48,11 +48,9 @@ static func build_racing_circuit(
 		_tile(track, border, Vector3(east_x - tile - i * tile, 0, -north * tile + south * tile + tile), 90.0, false, tile, width, true, MeshFactory.ASPHALT, "racing")
 	_tile(track, border, Vector3(0, 0, -north * tile + south * tile + tile), 90.0, true, tile, width, true, MeshFactory.ASPHALT, "racing")
 
-	_flush_road_collision(track)
 	var layout: Dictionary = _preview_waypoint_layout(_racing_waypoints(tile, north, east, south, west), tile * 0.5)
 	_fence_racing(border, kit, tile, width, north, east)
 	_place_path_guides(track, layout, kit)
-	_place_visual_barriers(border, layout, width, kit, 2.0)
 	_fill_ground_excluding(fill, road.min_x - 28, road.max_x + 28, road.min_z - 28, road.max_z + 28, 1.0, road, kit + "grass.glb")
 	return Vector3(0.5, 0.0, -3.0)
 
@@ -214,7 +212,6 @@ static func _build_waypoint_circuit(
 		samples.append(b)
 
 	var layout := _layout_from_samples(samples, tile)
-	_flush_road_collision(track)
 	return layout
 
 
@@ -419,11 +416,11 @@ static func _tile(
 	)
 	if not covered:
 		_register_road_aabb(spec, rotation_y_deg)
+		_add_slab_collision(track, spec, rotation_y_deg)
 		if edge_theme != "":
 			_place_edge_walls_for_spec(border, spec, rotation_y_deg, edge_theme)
 	if f1_curbs:
 		MeshFactory.add_track_line(track, spec.line_center, spec.line_size, rotation_y_deg)
-	_stamp_road_cells(spec, rotation_y_deg, surface_color)
 
 
 static func _aabb_from_spec(spec: Dictionary, rot_y: float) -> Dictionary:
@@ -466,21 +463,20 @@ static func _register_road_aabb(spec: Dictionary, rot_y: float) -> void:
 	_placed_road_aabbs.append(_aabb_from_spec(spec, rot_y))
 
 
-static func _stamp_road_cells(spec: Dictionary, rot_y: float, color: Color) -> void:
-	const cell := 0.42
-	var aabb := _aabb_from_spec(spec, rot_y)
-	var ix0 := int(floor(aabb.min_x / cell))
-	var ix1 := int(floor(aabb.max_x / cell))
-	var iz0 := int(floor(aabb.min_z / cell))
-	var iz1 := int(floor(aabb.max_z / cell))
-	for ix in range(ix0, ix1 + 1):
-		for iz in range(iz0, iz1 + 1):
-			_road_cells["%d,%d" % [ix, iz]] = color
-
-
-static func _flush_road_collision(track: Node3D) -> void:
-	const cell := 0.42
-	MeshFactory.add_merged_road_collision(track, _road_cells, cell, SLAB_H)
+static func _add_slab_collision(track: Node3D, spec: Dictionary, rot_y: float) -> void:
+	if _road_collision_body == null:
+		_road_collision_body = StaticBody3D.new()
+		_road_collision_body.name = "RoadCollision"
+		_road_collision_body.collision_layer = 1
+		_road_collision_body.collision_mask = 0
+		track.add_child(_road_collision_body)
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = spec.size
+	collision.shape = shape
+	collision.position = spec.center
+	collision.rotation_degrees.y = rot_y
+	_road_collision_body.add_child(collision)
 
 
 static func _place_edge_walls_for_spec(
@@ -491,7 +487,8 @@ static func _place_edge_walls_for_spec(
 ) -> void:
 	const WALL_H := 0.72
 	const WALL_W := 0.2
-	const SHOULDER := 0.42
+	const SHOULDER := 0.55
+	const RAIL_GAP := 0.45
 	var size: Vector3 = spec.size
 	var center: Vector3 = spec.center
 	var norm := int(rot) % 360
@@ -503,23 +500,41 @@ static func _place_edge_walls_for_spec(
 		road_half = size.z * 0.5
 		long_len = size.x
 	var y := WALL_H * 0.5
-	var out := road_half + SHOULDER + WALL_W * 0.5
+	var visual_out := road_half + SHOULDER + WALL_W * 0.5
+	var rail_out := visual_out + WALL_W * 0.5 + RAIL_GAP
 	var idx := _wall_seg_index
 	_wall_seg_index += 1
 
 	match norm:
 		0:
-			_place_side_wall(border, center + Vector3(-out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, -1.0)
-			_place_side_wall(border, center + Vector3(out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, 1.0)
+			_place_side_wall(border, center + Vector3(-visual_out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, -1.0, false)
+			_place_side_wall(border, center + Vector3(visual_out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, 1.0, false)
+			_place_side_rail(border, center + Vector3(-rail_out, y, 0), Vector3(0.12, WALL_H, long_len), 0.0)
+			_place_side_rail(border, center + Vector3(rail_out, y, 0), Vector3(0.12, WALL_H, long_len), 0.0)
 		270:
-			_place_side_wall(border, center + Vector3(0, y, -out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, -1.0)
-			_place_side_wall(border, center + Vector3(0, y, out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, 1.0)
+			_place_side_wall(border, center + Vector3(0, y, -visual_out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, -1.0, false)
+			_place_side_wall(border, center + Vector3(0, y, visual_out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, 1.0, false)
+			_place_side_rail(border, center + Vector3(0, y, -rail_out), Vector3(long_len, WALL_H, 0.12), 0.0)
+			_place_side_rail(border, center + Vector3(0, y, rail_out), Vector3(long_len, WALL_H, 0.12), 0.0)
 		180:
-			_place_side_wall(border, center + Vector3(out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, -1.0)
-			_place_side_wall(border, center + Vector3(-out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, 1.0)
+			_place_side_wall(border, center + Vector3(visual_out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, -1.0, false)
+			_place_side_wall(border, center + Vector3(-visual_out, y, 0), Vector3(WALL_W, WALL_H, long_len), 0.0, theme, idx, 1.0, false)
+			_place_side_rail(border, center + Vector3(rail_out, y, 0), Vector3(0.12, WALL_H, long_len), 0.0)
+			_place_side_rail(border, center + Vector3(-rail_out, y, 0), Vector3(0.12, WALL_H, long_len), 0.0)
 		_:
-			_place_side_wall(border, center + Vector3(0, y, out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, -1.0)
-			_place_side_wall(border, center + Vector3(0, y, -out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, 1.0)
+			_place_side_wall(border, center + Vector3(0, y, visual_out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, -1.0, false)
+			_place_side_wall(border, center + Vector3(0, y, -visual_out), Vector3(long_len, WALL_H, WALL_W), 0.0, theme, idx, 1.0, false)
+			_place_side_rail(border, center + Vector3(0, y, rail_out), Vector3(long_len, WALL_H, 0.12), 0.0)
+			_place_side_rail(border, center + Vector3(0, y, -rail_out), Vector3(long_len, WALL_H, 0.12), 0.0)
+
+
+static func _place_side_rail(
+	border: Node3D,
+	center: Vector3,
+	size: Vector3,
+	rot: float
+) -> void:
+	MeshFactory.add_collision_box(border, center, size, rot)
 
 
 static func _place_side_wall(
@@ -529,9 +544,12 @@ static func _place_side_wall(
 	rot: float,
 	theme: String,
 	index: int,
-	side: float
+	side: float,
+	with_collision: bool
 ) -> void:
-	MeshFactory.add_surface_slab(border, center, size, rot, _edge_wall_color(theme, index, side), true)
+	MeshFactory.add_surface_slab(
+		border, center, size, rot, _edge_wall_color(theme, index, side), with_collision
+	)
 
 
 static func _edge_wall_color(theme: String, index: int, side: float) -> Color:
