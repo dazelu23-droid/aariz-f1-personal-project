@@ -20,7 +20,9 @@ func get_world_scale() -> float:
 
 
 func get_track_center_offset() -> Vector3:
-	return Vector3(-19.0, 0.0, 14.0)
+	var layout: Dictionary = _RoadBuilder.get_city_layout()
+	var bounds: Dictionary = layout.bounds
+	return Vector3(-(bounds.min_x + bounds.max_x) * 0.5, 0.0, -(bounds.min_z + bounds.max_z) * 0.5)
 
 
 func get_ground_color() -> Color:
@@ -28,7 +30,9 @@ func get_ground_color() -> Color:
 
 
 func get_ground_size() -> float:
-	return 400.0
+	var layout: Dictionary = _RoadBuilder.get_city_layout()
+	var bounds: Dictionary = layout.bounds
+	return maxf(bounds.max_x - bounds.min_x, bounds.max_z - bounds.min_z) + 120.0
 
 
 func _add_track_ground() -> void:

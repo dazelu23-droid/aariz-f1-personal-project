@@ -18,7 +18,7 @@ static func build_racing_circuit(
 	var east := 8
 	var south := 10
 	var west := 10
-	var road := get_racing_layout()["bounds"]
+	var road: Dictionary = get_racing_layout()["bounds"]
 
 	MeshFactory.add_start_finish_line(track, Vector3(0.5, SLAB_H + 0.02, -2.2), width)
 	_place_decal(track, kit, "roadStraightArrow.glb", Vector3(0, 0, -2), 0.0)
@@ -72,23 +72,16 @@ static func build_city_circuit(
 	fill: Node3D,
 	kit: String
 ) -> Vector3:
-	var layout := get_city_layout()
-	var tile: float = layout.tile
-	var north: int = layout.north
-	var east: int = layout.east
-	var south: int = layout.south
-	var west: int = layout.west
-	var road: Dictionary = layout.bounds
-
-	_build_kit_rect_circuit(track, kit, tile, north, east, south, west)
+	var tile := 2.0
+	var layout := _build_kit_winding_circuit(track, kit, tile, _city_winding_legs())
 	_fill_ground_excluding(
 		fill,
-		road.min_x - 24,
-		road.max_x + 24,
-		road.min_z - 24,
-		road.max_z + 24,
+		layout.bounds.min_x - 24,
+		layout.bounds.max_x + 24,
+		layout.bounds.min_z - 24,
+		layout.bounds.max_z + 24,
 		2.0,
-		road,
+		layout.bounds,
 		"",
 		MeshFactory.CONCRETE
 	)
@@ -96,81 +89,161 @@ static func build_city_circuit(
 
 
 static func get_city_layout() -> Dictionary:
-	var tile := 2.0
-	var north := 14
-	var east := 18
-	var south := 14
-	var west := 18
-	return {
-		"tile": tile,
-		"north": north,
-		"east": east,
-		"south": south,
-		"west": west,
-		"bounds": _kit_road_bounds(tile, north, east, south, west),
-	}
+	return _preview_kit_layout(2.0, _city_winding_legs())
 
 
-static func _build_kit_rect_circuit(
+static func _city_winding_legs() -> Array:
+	return [
+		{"count": 5, "turn": "right"},
+		{"count": 3, "turn": "right"},
+		{"count": 4, "turn": "left"},
+		{"count": 5, "turn": "right"},
+		{"count": 2, "turn": "left"},
+		{"count": 4, "turn": "sharp_right"},
+		{"count": 3, "turn": "right"},
+		{"count": 4, "turn": "left"},
+		{"count": 5, "turn": "right"},
+		{"count": 3, "turn": "left"},
+		{"count": 4, "turn": "right"},
+	]
+
+
+static func _nature_winding_legs() -> Array:
+	return [
+		{"count": 4, "turn": "right"},
+		{"count": 3, "turn": "left"},
+		{"count": 5, "turn": "right"},
+		{"count": 2, "turn": "sharp_right"},
+		{"count": 3, "turn": "right"},
+		{"count": 4, "turn": "left"},
+		{"count": 4, "turn": "right"},
+		{"count": 2, "turn": "left"},
+		{"count": 5, "turn": "right"},
+		{"count": 3, "turn": "sharp_right"},
+		{"count": 4, "turn": "left"},
+	]
+
+
+static func _build_kit_winding_circuit(track: Node3D, kit: String, tile: float, legs: Array) -> Dictionary:
+	var heading := 0
+	var origin := Vector3.ZERO
+	var samples: Array[Vector3] = [origin]
+
+	_place_kit_road(track, kit, "roadStart.glb", origin, _heading_rot(heading))
+	_place_kit_road(track, kit, "roadStraightArrow.glb", _kit_straight_position(origin, heading, 0, tile), _heading_rot(heading))
+	samples.append(_kit_straight_position(origin, heading, 0, tile))
+
+	for leg in legs:
+		var count: int = leg.count
+		_place_kit_leg(track, kit, origin, heading, count, tile)
+		for i in range(count):
+			samples.append(_kit_straight_position(origin, heading, i, tile))
+		var corner_pos := _kit_corner_position(origin, heading, count, tile)
+		_place_kit_corner_piece(track, kit, corner_pos, heading, leg.get("turn", "right"))
+		samples.append(corner_pos)
+		heading = _apply_turn(heading, leg.get("turn", "right"))
+		origin = corner_pos
+
+	return _layout_from_samples(samples, tile)
+
+
+static func _preview_kit_layout(tile: float, legs: Array) -> Dictionary:
+	var heading := 0
+	var origin := Vector3.ZERO
+	var samples: Array[Vector3] = [origin]
+	for leg in legs:
+		for i in range(leg.count):
+			samples.append(_kit_straight_position(origin, heading, i, tile))
+		var corner_pos := _kit_corner_position(origin, heading, leg.count, tile)
+		samples.append(corner_pos)
+		heading = _apply_turn(heading, leg.get("turn", "right"))
+		origin = corner_pos
+	return _layout_from_samples(samples, tile)
+
+
+static func _place_kit_leg(
 	track: Node3D,
 	kit: String,
-	tile: float,
-	north: int,
-	east: int,
-	south: int,
-	west: int
+	origin: Vector3,
+	heading: int,
+	count: int,
+	tile: float
 ) -> void:
-	_place_kit_road(track, kit, "roadStart.glb", Vector3.ZERO, 0.0)
-	_place_kit_road(track, kit, "roadStraightArrow.glb", Vector3(0, 0, -tile), 0.0)
-
-	for i in range(1, north + 1):
-		_place_kit_road(track, kit, "roadStraightLong.glb", Vector3(0, 0, -i * tile), 0.0)
-	_place_kit_road(track, kit, "roadCornerLargeBorder.glb", Vector3(0, 0, -north * tile), 0.0)
-
-	var north_end := -north * tile
-	var east_z := north_end - tile
-	for i in range(east):
-		_place_kit_road(track, kit, "roadStraightLong.glb", Vector3(tile + i * tile, 0, east_z), -90.0)
-	_place_kit_road(
-		track, kit, "roadCornerLargeBorder.glb", Vector3(tile + east * tile, 0, east_z), -90.0
-	)
-
-	var east_end := tile + east * tile
-	var south_x := east_end + 1.0
-	for i in range(south):
-		_place_kit_road(
-			track, kit, "roadStraightLong.glb", Vector3(south_x, 0, north_end + i * tile), 180.0
-		)
-	_place_kit_road(
-		track, kit, "roadCornerLargeBorder.glb", Vector3(south_x, 0, north_end + south * tile), 180.0
-	)
-
-	var south_end := north_end + south * tile
-	var west_z := south_end + tile
-	for i in range(west):
-		_place_kit_road(
-			track, kit, "roadStraightLong.glb", Vector3(south_x - tile - i * tile, 0, west_z), 90.0
-		)
-	_place_kit_road(track, kit, "roadCornerLargeBorder.glb", Vector3.ZERO, 90.0)
+	var rot := _heading_rot(heading)
+	for i in range(count):
+		_place_kit_road(track, kit, "roadStraightLong.glb", _kit_straight_position(origin, heading, i, tile), rot)
 
 
-static func _kit_road_bounds(tile: float, north: int, east: int, south: int, west: int) -> Dictionary:
-	var north_end := -north * tile
-	var east_z := north_end - tile
-	var east_end := tile + east * tile
-	var south_end := north_end + south * tile
-	var west_z := south_end + tile
+static func _kit_straight_position(origin: Vector3, heading: int, index: int, tile: float) -> Vector3:
+	match heading:
+		0:
+			return origin + Vector3(0.0, 0.0, -float(index + 1) * tile)
+		1:
+			return origin + Vector3(tile + float(index) * tile, 0.0, -tile)
+		2:
+			return origin + Vector3(1.0, 0.0, tile + float(index) * tile)
+		_:
+			return origin + Vector3(-tile - float(index) * tile, 0.0, tile)
+
+
+static func _kit_corner_position(origin: Vector3, heading: int, count: int, tile: float) -> Vector3:
+	return _kit_straight_position(origin, heading, count - 1, tile)
+
+
+static func _place_kit_corner_piece(
+	track: Node3D,
+	kit: String,
+	pos: Vector3,
+	heading: int,
+	turn: String
+) -> void:
+	var piece := "roadCornerLargeBorder.glb"
+	if turn == "sharp_right" or turn == "sharp_left":
+		piece = "roadCornerSmallBorder.glb"
+	_place_kit_road(track, kit, piece, pos, _heading_rot(heading))
+
+
+static func _heading_rot(heading: int) -> float:
+	match heading:
+		0:
+			return 0.0
+		1:
+			return -90.0
+		2:
+			return 180.0
+		_:
+			return 90.0
+
+
+static func _apply_turn(heading: int, turn: String) -> int:
+	match turn:
+		"left", "sharp_left":
+			return (heading + 3) % 4
+		_:
+			return (heading + 1) % 4
+
+
+static func _layout_from_samples(samples: Array, tile: float) -> Dictionary:
+	var min_x := INF
+	var max_x := -INF
+	var min_z := INF
+	var max_z := -INF
+	for point in samples:
+		var p: Vector3 = point
+		min_x = minf(min_x, p.x)
+		max_x = maxf(max_x, p.x)
+		min_z = minf(min_z, p.z)
+		max_z = maxf(max_z, p.z)
+	var margin := 4.0
 	return {
-		"min_x": -1.0,
-		"max_x": east_end + 2.0,
-		"min_z": east_z - 1.0,
-		"max_z": west_z + 1.0,
-		"north_end": north_end,
-		"east_z": east_z,
-		"east_end": east_end,
-		"south_x": east_end + 1.0,
-		"south_end": south_end,
-		"west_z": west_z,
+		"tile": tile,
+		"samples": samples,
+		"bounds": {
+			"min_x": min_x - margin,
+			"max_x": max_x + margin,
+			"min_z": min_z - margin,
+			"max_z": max_z + margin,
+		},
 	}
 
 
@@ -180,67 +253,90 @@ static func build_nature_circuit(
 	fill: Node3D,
 	nature: String
 ) -> Vector3:
-	var layout := get_nature_layout()
-	var tile: float = layout.tile
-	var width: float = layout.width
-	var north: int = layout.north
-	var east: int = layout.east
-	var south: int = layout.south
-	var west: int = layout.west
-	var road: Dictionary = layout.bounds
-
-	for i in range(north - 1):
-		_tile(track, border, Vector3(0, 0, -i * tile), 0.0, false, tile, width, false, MeshFactory.DIRT)
-	_tile(track, border, Vector3(0, 0, -(north - 1) * tile), 0.0, true, tile, width, false, MeshFactory.DIRT)
-	for i in range(east - 1):
-		_tile(track, border, Vector3(1 + i * tile, 0, -(north - 1) * tile - tile), -90.0, false, tile, width, false, MeshFactory.DIRT)
-	_tile(track, border, Vector3(1 + (east - 1) * tile, 0, -(north - 1) * tile - tile), -90.0, true, tile, width, false, MeshFactory.DIRT)
-	var east_x := 1.0 + (east - 1) * tile
-	var north_end := -(north - 1) * tile - tile
-	for i in range(south - 1):
-		_tile(track, border, Vector3(east_x, 0, north_end + i * tile), 180.0, false, tile, width, false, MeshFactory.DIRT)
-	_tile(track, border, Vector3(east_x, 0, north_end + (south - 1) * tile), 180.0, true, tile, width, false, MeshFactory.DIRT)
-	for i in range(west - 1):
-		_tile(track, border, Vector3(east_x - i * tile, 0, north_end + (south - 1) * tile + tile), 90.0, false, tile, width, false, MeshFactory.DIRT)
-	_tile(track, border, Vector3(0, 0, north_end + (south - 1) * tile + tile), 90.0, true, tile, width, false, MeshFactory.DIRT)
-
+	var tile := 1.25
+	var width := 2.6
+	var layout := _build_slab_winding_circuit(track, border, tile, width, _nature_winding_legs())
 	_fill_ground_excluding(
 		fill,
-		road.min_x - 14,
-		road.max_x + 14,
-		road.min_z - 14,
-		road.max_z + 14,
+		layout.bounds.min_x - 16,
+		layout.bounds.max_x + 16,
+		layout.bounds.min_z - 16,
+		layout.bounds.max_z + 16,
 		1.0,
-		road,
+		layout.bounds,
 		nature + "ground_grass.fbx"
 	)
 	return Vector3(0.5, 0.0, -0.5)
 
 
 static func get_nature_layout() -> Dictionary:
-	var tile := 1.25
-	var width := 2.6
-	var north := 10
-	var east := 12
-	var south := 10
-	var west := 12
-	var north_end := -(north - 1) * tile - tile
-	var east_x := 1.0 + (east - 1) * tile
-	var south_end := north_end + (south - 1) * tile
-	return {
-		"tile": tile,
-		"width": width,
-		"north": north,
-		"east": east,
-		"south": south,
-		"west": west,
-		"bounds": {
-			"min_x": -0.5,
-			"max_x": east_x + 1.0,
-			"min_z": north_end - 1.0,
-			"max_z": south_end + tile + 1.0,
-		},
-	}
+	return _preview_slab_layout(1.25, _nature_winding_legs())
+
+
+static func _build_slab_winding_circuit(
+	track: Node3D,
+	border: Node3D,
+	tile: float,
+	width: float,
+	legs: Array
+) -> Dictionary:
+	var heading := 0
+	var origin := Vector3.ZERO
+	var samples: Array[Vector3] = [origin]
+
+	for leg in legs:
+		var count: int = leg.count
+		for i in range(count):
+			_tile(
+				track,
+				border,
+				_slab_straight_position(origin, heading, i, tile),
+				_heading_rot(heading),
+				i == count - 1,
+				tile,
+				width,
+				false,
+				MeshFactory.DIRT
+			)
+			samples.append(_slab_straight_position(origin, heading, i, tile))
+		var corner_pos := _slab_corner_position(origin, heading, count, tile)
+		heading = _apply_turn(heading, leg.get("turn", "right"))
+		origin = corner_pos
+		samples.append(corner_pos)
+
+	return _layout_from_samples(samples, tile)
+
+
+static func _preview_slab_layout(tile: float, legs: Array) -> Dictionary:
+	var heading := 0
+	var origin := Vector3.ZERO
+	var samples: Array[Vector3] = [origin]
+	for leg in legs:
+		for i in range(leg.count):
+			samples.append(_slab_straight_position(origin, heading, i, tile))
+		var corner_pos := _slab_corner_position(origin, heading, leg.count, tile)
+		heading = _apply_turn(heading, leg.get("turn", "right"))
+		origin = corner_pos
+		samples.append(corner_pos)
+	var layout := _layout_from_samples(samples, tile)
+	layout["width"] = 2.6
+	return layout
+
+
+static func _slab_straight_position(origin: Vector3, heading: int, index: int, tile: float) -> Vector3:
+	match heading:
+		0:
+			return origin + Vector3(0.0, 0.0, -float(index) * tile)
+		1:
+			return origin + Vector3(float(index) * tile, 0.0, 0.0)
+		2:
+			return origin + Vector3(0.0, 0.0, float(index) * tile)
+		_:
+			return origin + Vector3(-float(index) * tile, 0.0, 0.0)
+
+
+static func _slab_corner_position(origin: Vector3, heading: int, count: int, tile: float) -> Vector3:
+	return _slab_straight_position(origin, heading, count - 1, tile)
 
 
 static func _tile(

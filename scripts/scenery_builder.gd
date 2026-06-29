@@ -20,64 +20,32 @@ static func populate_city(props: Node3D, roads: String, buildings: String, _raci
 
 
 static func _place_city_canyon_walls(props: Node3D, buildings: String, layout: Dictionary) -> void:
-	var bounds: Dictionary = layout.bounds
-	var tile: float = layout.tile
-	var north_end: float = bounds.north_end
-	var east_z: float = bounds.east_z
-	var east_end: float = bounds.east_end
-	var south_x: float = bounds.south_x
-	var south_end: float = bounds.south_end
-	var west_z: float = bounds.west_z
-	var road: Dictionary = bounds
-	var step := 1.6
-	var wall_gap := 7.5
-	var far_gap := 10.5
+	var road: Dictionary = layout.bounds
+	var samples: Array = layout.get("samples", [])
+	var wall_gap := 8.0
+	var far_gap := 11.5
 	var idx := 0
 
-	# North straight — outer canyon walls only (well clear of asphalt).
-	var z := 0.5
-	while z >= north_end - 0.5:
-		_place_city_building_safe(props, buildings, Vector3(-wall_gap, 0, z), idx, road)
-		_place_city_building_safe(props, buildings, Vector3(wall_gap + 1.5, 0, z), idx + 1, road)
-		_place_city_building_safe(props, buildings, Vector3(-far_gap, 0, z), idx + 2, road, true)
-		_place_city_building_safe(props, buildings, Vector3(far_gap + 1.5, 0, z), idx + 3, road, true)
-		z -= step
-		idx += 4
+	if samples.size() < 2:
+		return
 
-	# East straight — buildings north of the road only.
-	var x := tile
-	while x <= east_end + 0.5:
-		_place_city_building_safe(props, buildings, Vector3(x, 0, east_z - wall_gap), idx, road)
-		_place_city_building_safe(props, buildings, Vector3(x, 0, east_z - far_gap), idx + 1, road, true)
-		x += step
-		idx += 2
-
-	# South straight — buildings east of the road only.
-	z = north_end
-	while z <= south_end + 0.5:
-		_place_city_building_safe(props, buildings, Vector3(south_x + wall_gap, 0, z), idx, road)
-		_place_city_building_safe(props, buildings, Vector3(south_x + far_gap, 0, z), idx + 1, road, true)
-		z += step
-		idx += 2
-
-	# West straight — buildings south of the road only.
-	x = south_x - tile
-	while x >= 0.0:
-		_place_city_building_safe(props, buildings, Vector3(x, 0, west_z + wall_gap), idx, road)
-		_place_city_building_safe(props, buildings, Vector3(x, 0, west_z + far_gap), idx + 1, road, true)
-		x -= step
-		idx += 2
-
-	# Corner skyscrapers sit on outer wall offsets only.
-	var corners := [
-		Vector3(-wall_gap, 0, 0.5),
-		Vector3(wall_gap + 1.5, 0, north_end - 0.5),
-		Vector3(east_end + wall_gap, 0, east_z - wall_gap),
-		Vector3(south_x + wall_gap, 0, south_end + 0.5),
-		Vector3(0.5, 0, west_z + wall_gap),
-	]
-	for i in corners.size():
-		_place_city_building_safe(props, buildings, corners[i], idx + i, road, true)
+	for i in range(samples.size() - 1):
+		var a: Vector3 = samples[i]
+		var b: Vector3 = samples[i + 1]
+		if a.distance_squared_to(b) < 0.01:
+			continue
+		var dir := (b - a).normalized()
+		var perp := Vector3(-dir.z, 0.0, dir.x)
+		var span := a.distance_to(b)
+		var steps := maxi(1, int(span / 1.5))
+		for step in range(steps + 1):
+			var t := float(step) / float(steps)
+			var p := a.lerp(b, t)
+			_place_city_building_safe(props, buildings, p + perp * wall_gap, idx, road, false, samples)
+			_place_city_building_safe(props, buildings, p - perp * wall_gap, idx + 1, road, false, samples)
+			_place_city_building_safe(props, buildings, p + perp * far_gap, idx + 2, road, true, samples)
+			_place_city_building_safe(props, buildings, p - perp * far_gap, idx + 3, road, true, samples)
+			idx += 4
 
 
 static func _place_city_building_safe(
@@ -86,11 +54,32 @@ static func _place_city_building_safe(
 	pos: Vector3,
 	idx: int,
 	road: Dictionary,
-	tall: bool = false
+	tall: bool = false,
+	samples: Array = []
 ) -> void:
 	if _on_road_expanded(pos, road, 6.0):
 		return
+	if samples.size() > 1 and _near_path(pos, samples, 5.5):
+		return
 	_place_city_building(props, buildings, pos, idx, tall)
+
+
+static func _near_path(pos: Vector3, samples: Array, clearance: float) -> bool:
+	for i in range(samples.size() - 1):
+		var a: Vector3 = samples[i]
+		var b: Vector3 = samples[i + 1]
+		if _point_segment_distance(pos, a, b) < clearance:
+			return true
+	return false
+
+
+static func _point_segment_distance(point: Vector3, a: Vector3, b: Vector3) -> float:
+	var ab := b - a
+	var len_sq := ab.length_squared()
+	if len_sq < 0.0001:
+		return point.distance_to(a)
+	var t := clampf((point - a).dot(ab) / len_sq, 0.0, 1.0)
+	return point.distance_to(a + ab * t)
 
 
 static func _place_city_outer_fill(props: Node3D, buildings: String, road: Dictionary) -> void:
@@ -175,7 +164,9 @@ static func _on_road_expanded(pos: Vector3, road: Dictionary, margin: float) -> 
 
 
 static func populate_nature(props: Node3D, nature: String) -> void:
-	var road: Dictionary = RoadBuilder.get_nature_layout()["bounds"]
+	var layout: Dictionary = RoadBuilder.get_nature_layout()
+	var road: Dictionary = layout.bounds
+	var samples: Array = layout.get("samples", [])
 	_fill_grid(
 		props,
 		nature + "ground_grass.fbx",
@@ -195,11 +186,14 @@ static func populate_nature(props: Node3D, nature: String) -> void:
 	var idx := 0
 	for x in range(min_x, max_x, 2):
 		for z in range(min_z, max_z, 2):
-			if _on_road_expanded(Vector3(x, 0, z), road, 2.0):
+			var pos := Vector3(x, 0, z)
+			if _on_road_expanded(pos, road, 2.5):
+				continue
+			if samples.size() > 1 and _near_path(pos, samples, 3.0):
 				continue
 			if (x + z) % 3 != 0:
 				continue
-			_place(props, nature, tree_models[idx % tree_models.size()], Vector3(x, 0, z), float(idx) * 29.0)
+			_place(props, nature, tree_models[idx % tree_models.size()], pos, float(idx) * 29.0)
 			idx += 1
 
 	var rock_spots := [
@@ -209,8 +203,9 @@ static func populate_nature(props: Node3D, nature: String) -> void:
 		Vector3(road.min_x - 1, 0, road.max_z),
 	]
 	for i in rock_spots.size():
-		if not _on_road_expanded(rock_spots[i], road, 2.5):
-			_place(props, nature, "rock_largeA.fbx" if i % 2 == 0 else "rock_largeC.fbx", rock_spots[i], float(i) * 45.0)
+		var rock_pos: Vector3 = rock_spots[i]
+		if not _on_road_expanded(rock_pos, road, 2.5) and not _near_path(rock_pos, samples, 3.0):
+			_place(props, nature, "rock_largeA.fbx" if i % 2 == 0 else "rock_largeC.fbx", rock_pos, float(i) * 45.0)
 
 
 static func _place_start_line(props: Node3D, kit: String, road: Dictionary) -> void:
