@@ -92,7 +92,7 @@ func _setup_finish_line() -> void:
 	finish.position = spawn_point.position
 	finish.rotation = spawn_point.rotation
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(2.0 * s, 2.0, 4.0 * s)
+	shape.size = Vector3(2.2 * s, 1.6, 1.2 * s)
 	var col := CollisionShape3D.new()
 	col.shape = shape
 	finish.add_child(col)
@@ -161,16 +161,21 @@ func _setup_checkpoints() -> void:
 
 	var tile: float = layout.get("tile", 2.0)
 	var spacing := maxi(3, int(round(5.0 / tile)))
+	var start_skip := maxi(spacing * 2, int(round(8.0 / tile)))
 	var s := get_world_scale()
+	var start_local: Vector3 = samples[0] if samples[0] is Vector3 else Vector3.ZERO
 
 	var container := Node3D.new()
 	container.name = "Checkpoints"
 	add_child(container)
 
 	var index := 0
-	var sample_idx := spacing
+	var sample_idx := start_skip
 	while sample_idx < samples.size() - 1:
 		var local_pos: Vector3 = samples[sample_idx]
+		if local_pos.distance_to(start_local) < 4.5:
+			sample_idx += spacing
+			continue
 		var next_pos: Vector3 = samples[mini(sample_idx + 1, samples.size() - 1)]
 		var travel_dir := next_pos - local_pos
 		if travel_dir.length_squared() < 0.001 and sample_idx + 2 < samples.size():
@@ -188,7 +193,8 @@ func _setup_checkpoints() -> void:
 		var collision := checkpoint.get_node_or_null("CollisionShape3D") as CollisionShape3D
 		if collision and collision.shape is BoxShape3D:
 			var shape := collision.shape as BoxShape3D
-			shape.size = Vector3(3.6 * s, 2.5, 3.2 * s)
+			var road_width: float = layout.get("width", 3.0)
+			shape.size = Vector3(road_width * s * 1.1, 2.0, road_width * s * 1.1)
 
 		container.add_child(checkpoint)
 		index += 1

@@ -4,13 +4,16 @@ extends RefCounted
 const SLAB_H := 0.14
 const CURB_H := 0.076
 const CURB_W := 0.14
+const COLLISION_PAD := Vector3(0.18, 0.04, 0.18)
 
 static var _placed_road_aabbs: Array = []
+static var _collision_aabbs: Array = []
 static var _road_collision_body: StaticBody3D = null
 
 
 static func _reset_road_overlap_tracker() -> void:
 	_placed_road_aabbs.clear()
+	_collision_aabbs.clear()
 	_road_collision_body = null
 
 
@@ -80,6 +83,7 @@ static func get_racing_layout() -> Dictionary:
 	layout["east"] = east
 	layout["south"] = south
 	layout["west"] = west
+	layout["width"] = 3.0
 	return layout
 
 
@@ -115,7 +119,9 @@ static func build_city_circuit(
 
 
 static func get_city_layout() -> Dictionary:
-	return _preview_waypoint_layout(_chamfer_waypoints(_city_street_waypoints(), 2.2), 2.0)
+	var layout := _preview_waypoint_layout(_chamfer_waypoints(_city_street_waypoints(), 2.2), 2.0)
+	layout["width"] = 3.2
+	return layout
 
 
 static func _city_street_waypoints() -> Array:
@@ -402,7 +408,6 @@ static func _tile(
 	MeshFactory.add_surface_slab(
 		track, spec.center, spec.size, rotation_y_deg, surface_color, false
 	)
-	# Always add collision so overlapping visual tiles never leave driveable gaps.
 	_add_slab_collision(track, spec, rotation_y_deg)
 	if not covered:
 		_register_road_aabb(spec, rotation_y_deg)
@@ -451,6 +456,14 @@ static func _register_road_aabb(spec: Dictionary, rot_y: float) -> void:
 
 
 static func _add_slab_collision(track: Node3D, spec: Dictionary, rot_y: float) -> void:
+	var aabb := _aabb_from_spec(spec, rot_y)
+	for existing in _collision_aabbs:
+		if _aabb_overlaps(aabb, existing, 0.0):
+			return
+
+	var padded_size: Vector3 = spec.size + COLLISION_PAD
+	_collision_aabbs.append(_aabb_from_spec({"center": spec.center, "size": padded_size}, rot_y))
+
 	if _road_collision_body == null:
 		_road_collision_body = StaticBody3D.new()
 		_road_collision_body.name = "RoadCollision"
@@ -459,7 +472,7 @@ static func _add_slab_collision(track: Node3D, spec: Dictionary, rot_y: float) -
 		track.add_child(_road_collision_body)
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = spec.size
+	shape.size = padded_size
 	collision.shape = shape
 	collision.position = spec.center
 	collision.rotation_degrees.y = rot_y
