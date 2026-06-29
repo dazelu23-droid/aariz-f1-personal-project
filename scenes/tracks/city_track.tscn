@@ -1,0 +1,72 @@
+[gd_scene load_steps=6 format=3 uid="uid://citytrackscene01"]
+
+[ext_resource type="Script" path="res://scripts/tracks/city_track.gd" id="1_track"]
+[ext_resource type="Script" path="res://scripts/follow_camera.gd" id="2_camera"]
+[ext_resource type="Script" path="res://scripts/race_hud.gd" id="3_hud"]
+[ext_resource type="Script" path="res://scripts/race_timer.gd" id="4_timer"]
+
+[node name="CityTrack" type="Node3D"]
+script = ExtResource("1_track")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 20, 0)
+
+[node name="TrackRoot" type="Node3D" parent="."]
+
+[node name="BorderRoot" type="Node3D" parent="."]
+
+[node name="FillRoot" type="Node3D" parent="."]
+
+[node name="SceneryRoot" type="Node3D" parent="."]
+
+[node name="RaceTimer" type="Node" parent="."]
+script = ExtResource("4_timer")
+
+[node name="SpawnPoint" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -2)
+
+[node name="FollowCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 6, 10)
+current = true
+fov = 65.0
+script = ExtResource("2_camera")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("3_hud")
+timer_path = NodePath("../RaceTimer")
+
+[node name="Panel" type="PanelContainer" parent="HUD"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 380.0
+offset_bottom = 168.0
+
+[node name="Margin" type="MarginContainer" parent="HUD/Panel"]
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="HUD/Panel/Margin"]
+theme_override_constants/separation = 4
+
+[node name="Title" type="Label" parent="HUD/Panel/Margin/VBox"]
+theme_override_font_sizes/font_size = 24
+text = "City Streets"
+
+[node name="Timer" type="Label" parent="HUD/Panel/Margin/VBox"]
+theme_override_font_sizes/font_size = 20
+text = "Time: 0:00.00"
+
+[node name="Lap" type="Label" parent="HUD/Panel/Margin/VBox"]
+text = "Lap: 0"
+
+[node name="Best" type="Label" parent="HUD/Panel/Margin/VBox"]
+text = "Best: --:--.--"
+
+[node name="Hint" type="Label" parent="HUD/Panel/Margin/VBox"]
+theme_override_colors/font_color = Color(0.75, 0.8, 0.9, 1)
+theme_override_font_sizes/font_size = 14
+text = "Controls"

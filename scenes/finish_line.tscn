@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://2wc1vxmt4kme"]
+
+[ext_resource type="Script" path="res://scripts/finish_line.gd" id="1_finish"]
+
+[node name="FinishLine" type="Area3D"]
+script = ExtResource("1_finish")

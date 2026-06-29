@@ -1,0 +1,18 @@
+# Godot 4+ generated cache
+.godot/
+
+# Godot-specific
+*.import
+*.uid
+export_presets.cfg
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.cursor/
+
+# Build outputs
+build/
+export/
