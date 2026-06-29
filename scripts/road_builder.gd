@@ -374,7 +374,7 @@ static func _chamfer_waypoints(points: Array, radius: float) -> Array:
 		if absf(v1.dot(v2)) > 0.92:
 			out.append(b)
 			continue
-		var r := minf(radius, a.distance_to(b) * 0.42, b.distance_to(c) * 0.42)
+		var r := minf(radius, minf(a.distance_to(b) * 0.42, b.distance_to(c) * 0.42))
 		out.append(b - v1 * r)
 		for step in range(1, 4):
 			var t := float(step) / 4.0
