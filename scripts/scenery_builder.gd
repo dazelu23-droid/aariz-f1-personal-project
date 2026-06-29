@@ -15,15 +15,15 @@ static func populate_racing(props: Node3D, kit: String) -> void:
 static func populate_city(props: Node3D, roads: String, buildings: String, _racing_kit: String = "") -> void:
 	var layout := RoadBuilder.get_city_layout()
 	_place_city_canyon_walls(props, buildings, layout)
-	_place_city_outer_fill(props, buildings, layout.bounds)
-	_place_city_street_lights(props, roads, layout.bounds)
+	_place_city_path_lights(props, roads, layout)
+	_place_city_skyline_backdrop(props, buildings, layout.bounds)
 
 
 static func _place_city_canyon_walls(props: Node3D, buildings: String, layout: Dictionary) -> void:
 	var road: Dictionary = layout.bounds
 	var samples: Array = layout.get("samples", [])
-	var wall_gap := 8.0
-	var far_gap := 11.5
+	var wall_gap := 5.5
+	var far_gap := 8.0
 	var idx := 0
 
 	if samples.size() < 2:
@@ -41,10 +41,10 @@ static func _place_city_canyon_walls(props: Node3D, buildings: String, layout: D
 		for step in range(steps + 1):
 			var t := float(step) / float(steps)
 			var p := a.lerp(b, t)
-			_place_city_building_safe(props, buildings, p + perp * wall_gap, idx, road, false, samples)
-			_place_city_building_safe(props, buildings, p - perp * wall_gap, idx + 1, road, false, samples)
-			_place_city_building_safe(props, buildings, p + perp * far_gap, idx + 2, road, true, samples)
-			_place_city_building_safe(props, buildings, p - perp * far_gap, idx + 3, road, true, samples)
+			_place_city_building_safe(props, buildings, p + perp * wall_gap, idx, road, false, samples, false)
+			_place_city_building_safe(props, buildings, p - perp * wall_gap, idx + 1, road, false, samples, false)
+			_place_city_building_safe(props, buildings, p + perp * far_gap, idx + 2, road, true, samples, false)
+			_place_city_building_safe(props, buildings, p - perp * far_gap, idx + 3, road, true, samples, false)
 			idx += 4
 
 
@@ -55,11 +55,12 @@ static func _place_city_building_safe(
 	idx: int,
 	road: Dictionary,
 	tall: bool = false,
-	samples: Array = []
+	samples: Array = [],
+	check_path: bool = true
 ) -> void:
-	if _on_road_expanded(pos, road, 6.0):
+	if _on_road_expanded(pos, road, 4.5):
 		return
-	if samples.size() > 1 and _near_path(pos, samples, 5.5):
+	if check_path and samples.size() > 1 and _near_path(pos, samples, 4.0):
 		return
 	_place_city_building(props, buildings, pos, idx, tall)
 
@@ -82,40 +83,33 @@ static func _point_segment_distance(point: Vector3, a: Vector3, b: Vector3) -> f
 	return point.distance_to(a + ab * t)
 
 
-static func _place_city_outer_fill(props: Node3D, buildings: String, road: Dictionary) -> void:
+static func _place_city_path_lights(props: Node3D, roads: String, layout: Dictionary) -> void:
+	var samples: Array = layout.get("samples", [])
+	var road: Dictionary = layout.bounds
+	for i in range(0, maxi(0, samples.size() - 1), 3):
+		var p: Vector3 = samples[i]
+		var q: Vector3 = samples[i + 1]
+		if p.distance_squared_to(q) < 0.01:
+			continue
+		var dir := (q - p).normalized()
+		var perp := Vector3(-dir.z, 0.0, dir.x)
+		var light_pos := p + perp * 4.2
+		var rot := rad_to_deg(atan2(dir.x, dir.z))
+		_place_if_clear(props, roads, "light-square.obj", light_pos, rot, road, 3.0)
+
+
+static func _place_city_skyline_backdrop(props: Node3D, buildings: String, road: Dictionary) -> void:
 	var towers := [
 		"building-skyscraper-a.obj", "building-skyscraper-b.obj", "building-skyscraper-c.obj",
 		"building-skyscraper-d.obj", "building-skyscraper-e.obj",
 	]
-	var low := [
-		"low-detail-building-a.obj", "low-detail-building-b.obj", "low-detail-building-c.obj",
-		"low-detail-building-d.obj", "low-detail-building-e.obj", "low-detail-building-f.obj",
-	]
-	var pad := 8.0
-	for x in range(int(road.min_x) - 20, int(road.max_x) + 22, 2):
-		_place_if_clear(props, buildings, towers[abs(x) % towers.size()], Vector3(x, 0, road.min_z - pad), 0.0, road, 5.0)
-		_place_if_clear(props, buildings, towers[(abs(x) + 2) % towers.size()], Vector3(x, 0, road.max_z + pad), 180.0, road, 5.0)
-	for z in range(int(road.min_z) - 18, int(road.max_z) + 20, 2):
-		_place_if_clear(props, buildings, towers[abs(z) % towers.size()], Vector3(road.min_x - pad, 0, z), 90.0, road, 5.0)
-		_place_if_clear(props, buildings, towers[(abs(z) + 1) % towers.size()], Vector3(road.max_x + pad, 0, z), -90.0, road, 5.0)
+	var pad := 14.0
 	for x in range(int(road.min_x) - 8, int(road.max_x) + 10, 4):
-		for z in range(int(road.min_z) - 8, int(road.max_z) + 10, 4):
-			var pos := Vector3(x, 0, z)
-			if _on_road_expanded(pos, road, 7.0):
-				continue
-			var edge := _road_edge_distance(pos, road)
-			if edge < 12.0 or edge > 28.0:
-				continue
-			_place(props, buildings, low[(x + z) % low.size()], pos, float((x + z) * 23.0))
-
-
-static func _place_city_street_lights(props: Node3D, roads: String, road: Dictionary) -> void:
-	for x in range(int(road.min_x) - 4, int(road.max_x) + 6, 6):
-		_place_if_clear(props, roads, "light-square.obj", Vector3(x, 0, road.min_z - 5.5), 0.0, road, 4.0)
-		_place_if_clear(props, roads, "light-curved.obj", Vector3(x, 0, road.max_z + 5.5), 180.0, road, 4.0)
-	for z in range(int(road.min_z) - 4, int(road.max_z) + 6, 6):
-		_place_if_clear(props, roads, "light-square.obj", Vector3(road.min_x - 5.5, 0, z), 90.0, road, 4.0)
-		_place_if_clear(props, roads, "light-curved.obj", Vector3(road.max_x + 5.5, 0, z), -90.0, road, 4.0)
+		_place_if_clear(props, buildings, towers[abs(x) % towers.size()], Vector3(x, 0, road.min_z - pad), 0.0, road, 6.0)
+		_place_if_clear(props, buildings, towers[(abs(x) + 1) % towers.size()], Vector3(x, 0, road.max_z + pad), 180.0, road, 6.0)
+	for z in range(int(road.min_z) - 8, int(road.max_z) + 10, 4):
+		_place_if_clear(props, buildings, towers[abs(z) % towers.size()], Vector3(road.min_x - pad, 0, z), 90.0, road, 6.0)
+		_place_if_clear(props, buildings, towers[(abs(z) + 2) % towers.size()], Vector3(road.max_x + pad, 0, z), -90.0, road, 6.0)
 
 
 static func _place_city_building(

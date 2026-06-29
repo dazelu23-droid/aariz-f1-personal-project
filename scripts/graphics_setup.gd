@@ -11,12 +11,12 @@ static func apply(world_env: WorldEnvironment, theme: String) -> void:
 	env.sky = _make_sky(theme)
 
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.62 if theme == "racing" else 0.78
+	env.ambient_light_energy = 0.62 if theme == "racing" else (0.55 if theme == "city" else 0.78)
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	env.ambient_light_sky_contribution = 0.85
 
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.tonemap_exposure = 1.02
+	env.tonemap_exposure = 1.08 if theme == "city" else 1.02
 	env.tonemap_white = 5.5
 
 	env.ssao_enabled = true
@@ -31,9 +31,9 @@ static func apply(world_env: WorldEnvironment, theme: String) -> void:
 	env.ssil_radius = 4.0
 
 	env.glow_enabled = true
-	env.glow_intensity = 0.35
-	env.glow_strength = 0.65
-	env.glow_bloom = 0.12
+	env.glow_intensity = 0.55 if theme == "city" else 0.35
+	env.glow_strength = 0.85 if theme == "city" else 0.65
+	env.glow_bloom = 0.2 if theme == "city" else 0.12
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 
 	env.sdfgi_enabled = false
@@ -54,9 +54,9 @@ static func setup_sun(light: DirectionalLight3D, theme: String) -> void:
 	light.directional_shadow_blend_splits = true
 	light.shadow_bias = 0.03
 	light.shadow_normal_bias = 1.2
-	light.light_energy = 1.28
+	light.light_energy = 0.95 if theme == "city" else 1.28
 	light.light_color = _sun_color(theme)
-	light.rotation_degrees = Vector3(-52.0, _sun_yaw(theme), 0.0)
+	light.rotation_degrees = Vector3(-28.0 if theme == "city" else -52.0, _sun_yaw(theme), 0.0)
 
 
 static func _make_sky(theme: String) -> Sky:
@@ -70,10 +70,10 @@ static func _make_sky(theme: String) -> Sky:
 			sky_mat.ground_horizon_color = Color(0.26, 0.48, 0.32)
 			sky_mat.ground_bottom_color = Color(0.16, 0.32, 0.18)
 		"city":
-			sky_mat.sky_top_color = Color(0.06, 0.1, 0.24)
-			sky_mat.sky_horizon_color = Color(0.42, 0.5, 0.66)
-			sky_mat.ground_horizon_color = Color(0.26, 0.28, 0.32)
-			sky_mat.ground_bottom_color = Color(0.08, 0.08, 0.1)
+			sky_mat.sky_top_color = Color(0.02, 0.04, 0.12)
+			sky_mat.sky_horizon_color = Color(0.18, 0.22, 0.38)
+			sky_mat.ground_horizon_color = Color(0.12, 0.12, 0.16)
+			sky_mat.ground_bottom_color = Color(0.05, 0.05, 0.07)
 		"nature":
 			sky_mat.sky_top_color = Color(0.2, 0.46, 0.76)
 			sky_mat.sky_horizon_color = Color(0.68, 0.84, 0.7)
@@ -91,7 +91,7 @@ static func _make_sky(theme: String) -> Sky:
 static func _sun_color(theme: String) -> Color:
 	match theme:
 		"city":
-			return Color(1.0, 0.9, 0.78)
+			return Color(1.0, 0.82, 0.62)
 		"nature":
 			return Color(1.0, 0.95, 0.84)
 		_:
@@ -111,7 +111,7 @@ static func _sun_yaw(theme: String) -> float:
 static func _fog_color(theme: String) -> Color:
 	match theme:
 		"city":
-			return Color(0.52, 0.58, 0.7)
+			return Color(0.35, 0.4, 0.55)
 		"nature":
 			return Color(0.6, 0.76, 0.56)
 		_:
