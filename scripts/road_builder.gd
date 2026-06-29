@@ -184,8 +184,8 @@ static func _build_waypoint_circuit(
 
 	samples.append(waypoints[0])
 	if kit != "":
-		_place_kit_road(track, kit, "roadStart.glb", waypoints[0], 0.0)
-		_place_kit_road(track, kit, "roadStraightArrow.glb", waypoints[0] + Vector3(0, 0, -tile), 0.0)
+		_place_kit_road(track, kit, "roadStart.glb", waypoints[0], 0.0, false)
+		_place_kit_road(track, kit, "roadStraightArrow.glb", waypoints[0] + Vector3(0, 0, -tile), 0.0, false)
 
 	for seg_idx in range(waypoints.size() - 1):
 		var a: Vector3 = waypoints[seg_idx]
@@ -677,7 +677,7 @@ static func _fill_ground_excluding(
 			if not _on_road(pos, road):
 				if flat_color.r >= 0.0:
 					MeshFactory.add_surface_slab(
-						fill, pos + Vector3(0, -0.02, 0), Vector3(step, 0.08, step), 0.0, flat_color
+						fill, pos + Vector3(0, -0.02, 0), Vector3(step, 0.08, step), 0.0, flat_color, false
 					)
 				elif asset != "" and ResourceLoader.exists(asset):
 					MeshFactory.place_piece(fill, asset, "", pos, 0.0, false)

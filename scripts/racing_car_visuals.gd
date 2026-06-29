@@ -1,23 +1,22 @@
 extends Node3D
 
-const CAR_MESH := "res://assets/car-kit/Models/OBJ format/race.obj"
-const WHEEL_MESH := "res://assets/car-kit/Models/OBJ format/wheel-racing.obj"
-
-const WHEEL_OFFSETS := [
-	Vector3(-0.62, 0.18, 0.85),
-	Vector3(0.62, 0.18, 0.85),
-	Vector3(-0.62, 0.18, -0.85),
-	Vector3(0.62, 0.18, -0.85),
-]
-
 
 func _ready() -> void:
 	rotation_degrees.y = 180.0
-	var body := MeshFactory.create_model(CAR_MESH, "")
+	var car: Dictionary = GameSettings.get_selected_car()
+	var body_path: String = car.body
+	var body := MeshFactory.create_model(body_path, "")
+	var scale_factor: float = car.get("scale", 1.0)
+	body.scale = Vector3(scale_factor, scale_factor, scale_factor)
 	add_child(body)
 
-	for offset in WHEEL_OFFSETS:
-		var wheel := MeshFactory.create_model(WHEEL_MESH, "")
+	if car.get("integrated", false):
+		return
+
+	var wheel_path: String = GameSettings.WHEEL_MESH
+	var wheel_scale: float = car.get("wheel_scale", 0.42)
+	for offset in GameSettings.WHEEL_OFFSETS:
+		var wheel := MeshFactory.create_model(wheel_path, "")
 		wheel.position = offset
-		wheel.scale = Vector3(0.42, 0.42, 0.42)
+		wheel.scale = Vector3(wheel_scale, wheel_scale, wheel_scale)
 		add_child(wheel)

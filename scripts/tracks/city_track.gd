@@ -47,7 +47,8 @@ func _add_track_ground() -> void:
 		Vector3(0, -0.15, 0),
 		Vector3(get_ground_size() * 0.92, 0.2, get_ground_size() * 0.92),
 		0.0,
-		Color(0.3, 0.33, 0.36)
+		Color(0.3, 0.33, 0.36),
+		false
 	)
 
 

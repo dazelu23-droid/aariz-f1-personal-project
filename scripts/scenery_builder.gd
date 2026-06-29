@@ -327,4 +327,4 @@ static func _on_road(pos: Vector3, road: Dictionary) -> bool:
 static func _place(props: Node3D, folder: String, file: String, position: Vector3, rotation_y_deg: float = 0.0) -> void:
 	var path := folder + file
 	if ResourceLoader.exists(path):
-		MeshFactory.place_piece(props, path, "", position, rotation_y_deg, true)
+		MeshFactory.place_piece(props, path, "", position, rotation_y_deg, false)
