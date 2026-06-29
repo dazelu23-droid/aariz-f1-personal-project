@@ -4,17 +4,20 @@ extends RefCounted
 const SLAB_H := 0.14
 const CURB_H := 0.076
 const CURB_W := 0.14
-const COLLISION_PAD := Vector3(0.18, 0.04, 0.18)
 
 static var _placed_road_aabbs: Array = []
-static var _collision_aabbs: Array = []
-static var _road_collision_body: StaticBody3D = null
+static var _collision_cells: Dictionary = {}
+static var _collision_cell_size: float = 0.55
 
 
 static func _reset_road_overlap_tracker() -> void:
 	_placed_road_aabbs.clear()
-	_collision_aabbs.clear()
-	_road_collision_body = null
+	_collision_cells.clear()
+
+
+static func _begin_road_build(tile: float) -> void:
+	_reset_road_overlap_tracker()
+	_collision_cell_size = clampf(tile * 0.42, 0.48, 0.62)
 
 
 static func build_racing_circuit(
@@ -23,8 +26,8 @@ static func build_racing_circuit(
 	fill: Node3D,
 	kit: String
 ) -> Vector3:
-	_reset_road_overlap_tracker()
 	var tile := 2.0
+	_begin_road_build(tile)
 	var width := 3.0
 	var north := 10
 	var east := 8
@@ -49,6 +52,7 @@ static func build_racing_circuit(
 		_tile(track, border, Vector3(east_x - tile - i * tile, 0, -north * tile + south * tile + tile), 90.0, false, tile, width, true, MeshFactory.ASPHALT)
 	_tile(track, border, Vector3(0, 0, -north * tile + south * tile + tile), 90.0, true, tile, width, true, MeshFactory.ASPHALT)
 
+	_finish_road_collision(track)
 	var layout: Dictionary = _preview_waypoint_layout(_racing_waypoints(tile, north, east, south, west), tile * 0.5)
 	_place_path_guides(track, layout, kit)
 	_fill_ground_excluding(fill, road.min_x - 28, road.max_x + 28, road.min_z - 28, road.max_z + 28, 1.0, road, kit + "grass.glb")
@@ -93,8 +97,8 @@ static func build_city_circuit(
 	fill: Node3D,
 	kit: String
 ) -> Vector3:
-	_reset_road_overlap_tracker()
 	var tile := 2.0
+	_begin_road_build(tile)
 	var width := 3.2
 	var waypoints: Array = _chamfer_waypoints(_city_street_waypoints(), 2.2)
 	var layout: Dictionary = _build_waypoint_circuit(
@@ -207,6 +211,7 @@ static func _build_waypoint_circuit(
 		samples.append(b)
 
 	var layout := _layout_from_samples(samples, tile)
+	_finish_road_collision(track)
 	return layout
 
 
@@ -336,8 +341,8 @@ static func build_nature_circuit(
 	fill: Node3D,
 	nature: String
 ) -> Vector3:
-	_reset_road_overlap_tracker()
 	var tile := 1.25
+	_begin_road_build(tile)
 	var width := 2.6
 	var waypoints: Array = _chamfer_waypoints(_nature_trail_waypoints(), 1.6)
 	var layout: Dictionary = _build_waypoint_circuit(
@@ -408,7 +413,7 @@ static func _tile(
 	MeshFactory.add_surface_slab(
 		track, spec.center, spec.size, rotation_y_deg, surface_color, false
 	)
-	_add_slab_collision(track, spec, rotation_y_deg)
+	_stamp_spec_to_collision_grid(spec, rotation_y_deg)
 	if not covered:
 		_register_road_aabb(spec, rotation_y_deg)
 	if f1_curbs:
@@ -455,28 +460,32 @@ static func _register_road_aabb(spec: Dictionary, rot_y: float) -> void:
 	_placed_road_aabbs.append(_aabb_from_spec(spec, rot_y))
 
 
-static func _add_slab_collision(track: Node3D, spec: Dictionary, rot_y: float) -> void:
+static func _stamp_spec_to_collision_grid(spec: Dictionary, rot_y: float) -> void:
+	var size: Vector3 = spec.size
+	var center: Vector3 = spec.center
+	var half_x := size.x * 0.5 + 0.06
+	var half_z := size.z * 0.5 + 0.06
 	var aabb := _aabb_from_spec(spec, rot_y)
-	for existing in _collision_aabbs:
-		if _aabb_overlaps(aabb, existing, 0.0):
-			return
+	var cs := _collision_cell_size
+	var min_ix := int(floor(aabb.min_x / cs))
+	var max_ix := int(floor(aabb.max_x / cs))
+	var min_iz := int(floor(aabb.min_z / cs))
+	var max_iz := int(floor(aabb.max_z / cs))
+	var rot_rad := deg_to_rad(-rot_y)
+	for ix in range(min_ix, max_ix + 1):
+		for iz in range(min_iz, max_iz + 1):
+			var px := (float(ix) + 0.5) * cs
+			var pz := (float(iz) + 0.5) * cs
+			var local := Vector3(px - center.x, 0.0, pz - center.z).rotated(Vector3.UP, rot_rad)
+			if absf(local.x) <= half_x and absf(local.z) <= half_z:
+				_collision_cells["%d,%d" % [ix, iz]] = true
 
-	var padded_size: Vector3 = spec.size + COLLISION_PAD
-	_collision_aabbs.append(_aabb_from_spec({"center": spec.center, "size": padded_size}, rot_y))
 
-	if _road_collision_body == null:
-		_road_collision_body = StaticBody3D.new()
-		_road_collision_body.name = "RoadCollision"
-		_road_collision_body.collision_layer = 1
-		_road_collision_body.collision_mask = 0
-		track.add_child(_road_collision_body)
-	var collision := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
-	shape.size = padded_size
-	collision.shape = shape
-	collision.position = spec.center
-	collision.rotation_degrees.y = rot_y
-	_road_collision_body.add_child(collision)
+static func _finish_road_collision(track: Node3D) -> void:
+	if _collision_cells.is_empty():
+		return
+	MeshFactory.add_merged_road_collision(track, _collision_cells, _collision_cell_size, SLAB_H)
+	_collision_cells.clear()
 
 
 static func _slab_spec(anchor: Vector3, rot: float, corner: bool, tile: float, width: float) -> Dictionary:
@@ -609,7 +618,7 @@ static func _place_kit_road(
 	file: String,
 	pos: Vector3,
 	rot: float,
-	with_collision: bool = true
+	with_collision: bool = false
 ) -> void:
 	var path := folder + file
 	if ResourceLoader.exists(path):

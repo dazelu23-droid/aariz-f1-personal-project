@@ -45,7 +45,7 @@ static func place_piece(
 	texture_path: String,
 	position: Vector3,
 	rotation_y_deg: float = 0.0,
-	with_collision: bool = true,
+	with_collision: bool = false,
 	piece_scale: Vector3 = Vector3.ONE
 ) -> Node3D:
 	var piece := create_model(path, texture_path)
@@ -175,21 +175,23 @@ static func add_merged_road_collision(
 	if cells.is_empty():
 		return
 	var body := StaticBody3D.new()
+	body.name = "RoadCollision"
 	body.collision_layer = 1
 	body.collision_mask = 0
-	var overlap := 0.04
+	var overlap := maxf(cell_size * 0.1, 0.06)
+	var slab_h := height + 0.04
 	for key in cells:
 		var parts: PackedStringArray = key.split(",")
 		var ix := int(parts[0])
 		var iz := int(parts[1])
 		var center := Vector3(
 			(float(ix) + 0.5) * cell_size,
-			height * 0.5,
+			slab_h * 0.5,
 			(float(iz) + 0.5) * cell_size
 		)
 		var collision := CollisionShape3D.new()
 		var shape := BoxShape3D.new()
-		shape.size = Vector3(cell_size + overlap, height, cell_size + overlap)
+		shape.size = Vector3(cell_size + overlap, slab_h, cell_size + overlap)
 		collision.shape = shape
 		collision.position = center
 		body.add_child(collision)
