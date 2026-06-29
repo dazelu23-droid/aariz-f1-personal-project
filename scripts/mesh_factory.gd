@@ -129,9 +129,10 @@ static func add_surface_slab(
 	center: Vector3,
 	size: Vector3,
 	rotation_y_deg: float,
-	color: Color
+	color: Color,
+	with_collision: bool = true
 ) -> StaticBody3D:
-	return _add_colored_box(parent, center, size, rotation_y_deg, color, true)
+	return _add_colored_box(parent, center, size, rotation_y_deg, color, with_collision)
 
 
 static func add_curb(

@@ -5,6 +5,14 @@ const SLAB_H := 0.14
 const CURB_H := 0.076
 const CURB_W := 0.14
 
+static var _placed_road_aabbs: Array = []
+static var _road_cells: Dictionary = {}
+
+
+static func _reset_road_overlap_tracker() -> void:
+	_placed_road_aabbs.clear()
+	_road_cells.clear()
+
 
 static func build_racing_circuit(
 	track: Node3D,
@@ -12,6 +20,7 @@ static func build_racing_circuit(
 	fill: Node3D,
 	kit: String
 ) -> Vector3:
+	_reset_road_overlap_tracker()
 	var tile := 2.0
 	var width := 3.0
 	var north := 10
@@ -37,6 +46,7 @@ static func build_racing_circuit(
 		_tile(track, border, Vector3(east_x - tile - i * tile, 0, -north * tile + south * tile + tile), 90.0, false, tile, width, true)
 	_tile(track, border, Vector3(0, 0, -north * tile + south * tile + tile), 90.0, true, tile, width, true)
 
+	_flush_road_collision(track)
 	_fence_racing(border, kit, tile, width, north, east)
 	var layout: Dictionary = _preview_waypoint_layout(_racing_waypoints(tile, north, east, south, west), tile * 0.5)
 	_place_path_guides(track, layout, kit)
@@ -89,6 +99,7 @@ static func build_city_circuit(
 	fill: Node3D,
 	kit: String
 ) -> Vector3:
+	_reset_road_overlap_tracker()
 	var tile := 2.0
 	var width := 3.2
 	var waypoints: Array = _chamfer_waypoints(_city_street_waypoints(), 2.2)
@@ -199,6 +210,7 @@ static func _build_waypoint_circuit(
 			samples.append(center)
 		samples.append(b)
 
+	_flush_road_collision(track)
 	return _layout_from_samples(samples, tile)
 
 
@@ -328,6 +340,7 @@ static func build_nature_circuit(
 	fill: Node3D,
 	nature: String
 ) -> Vector3:
+	_reset_road_overlap_tracker()
 	var tile := 1.25
 	var width := 2.6
 	var waypoints: Array = _chamfer_waypoints(_nature_trail_waypoints(), 1.6)
@@ -396,10 +409,85 @@ static func _tile(
 	surface_color: Color = MeshFactory.ASPHALT
 ) -> void:
 	var spec := _slab_spec(anchor, rotation_y_deg, is_corner, tile, width)
-	MeshFactory.add_surface_slab(track, spec.center, spec.size, rotation_y_deg, surface_color)
-	if f1_curbs:
-		MeshFactory.add_track_line(track, spec.line_center, spec.line_size, rotation_y_deg)
-		_place_curbs(border, spec, rotation_y_deg)
+	var covered := _road_already_covered(spec, rotation_y_deg)
+	if not covered:
+		MeshFactory.add_surface_slab(
+			track, spec.center, spec.size, rotation_y_deg, surface_color, false
+		)
+		_register_road_aabb(spec, rotation_y_deg)
+		if f1_curbs:
+			MeshFactory.add_track_line(track, spec.line_center, spec.line_size, rotation_y_deg)
+			_place_curbs(border, spec, rotation_y_deg)
+	_stamp_road_cells(spec, rotation_y_deg, surface_color)
+
+
+static func _aabb_from_spec(spec: Dictionary, rot_y: float) -> Dictionary:
+	var size: Vector3 = spec.size
+	var center: Vector3 = spec.center
+	var half_x := size.x * 0.5
+	var half_z := size.z * 0.5
+	var norm := int(rot_y) % 360
+	if norm < 0:
+		norm += 360
+	if norm == 90 or norm == 270:
+		half_x = size.z * 0.5
+		half_z = size.x * 0.5
+	return {
+		"min_x": center.x - half_x,
+		"max_x": center.x + half_x,
+		"min_z": center.z - half_z,
+		"max_z": center.z + half_z,
+	}
+
+
+static func _aabb_overlaps(a: Dictionary, b: Dictionary, margin: float = 0.12) -> bool:
+	return (
+		a.min_x < b.max_x - margin
+		and a.max_x > b.min_x + margin
+		and a.min_z < b.max_z - margin
+		and a.max_z > b.min_z + margin
+	)
+
+
+static func _road_already_covered(spec: Dictionary, rot_y: float) -> bool:
+	var aabb := _aabb_from_spec(spec, rot_y)
+	for existing in _placed_road_aabbs:
+		if _aabb_overlaps(aabb, existing):
+			return true
+	return false
+
+
+static func _register_road_aabb(spec: Dictionary, rot_y: float) -> void:
+	_placed_road_aabbs.append(_aabb_from_spec(spec, rot_y))
+
+
+static func _stamp_road_cells(spec: Dictionary, rot_y: float, color: Color) -> void:
+	const cell := 0.42
+	var aabb := _aabb_from_spec(spec, rot_y)
+	var ix0 := int(floor(aabb.min_x / cell))
+	var ix1 := int(floor(aabb.max_x / cell))
+	var iz0 := int(floor(aabb.min_z / cell))
+	var iz1 := int(floor(aabb.max_z / cell))
+	for ix in range(ix0, ix1 + 1):
+		for iz in range(iz0, iz1 + 1):
+			_road_cells["%d,%d" % [ix, iz]] = color
+
+
+static func _flush_road_collision(track: Node3D) -> void:
+	const cell := 0.42
+	for key in _road_cells:
+		var parts: PackedStringArray = key.split(",")
+		var ix := int(parts[0])
+		var iz := int(parts[1])
+		var color: Color = _road_cells[key]
+		var center := Vector3(
+			(float(ix) + 0.5) * cell,
+			SLAB_H * 0.5,
+			(float(iz) + 0.5) * cell
+		)
+		MeshFactory.add_surface_slab(
+			track, center, Vector3(cell, SLAB_H, cell), 0.0, color, true
+		)
 
 
 static func _slab_spec(anchor: Vector3, rot: float, corner: bool, tile: float, width: float) -> Dictionary:
