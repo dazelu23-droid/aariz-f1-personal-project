@@ -47,5 +47,5 @@ func _build_track() -> void:
 	var spawn_local: Vector3 = _RoadBuilder.build_city_circuit(
 		track_root, border_root, fill_root, RACING_KIT
 	)
-	_SceneryBuilder.populate_city(scenery_root, ROADS, BUILDINGS, RACING_KIT)
+	_SceneryBuilder.populate_city(scenery_root, ROADS, BUILDINGS)
 	_set_spawn(Vector3(spawn_local.x, 0.42, spawn_local.z), true)

@@ -51,9 +51,24 @@ static func build_city_circuit(
 	var road := _kit_road_bounds(tile, north, east, south, west)
 
 	_build_kit_rect_circuit(track, kit, tile, north, east, south, west)
-	_place_city_track_barriers(border, kit, tile, north, east, south, west)
 	_fill_ground_excluding(fill, -18, 28, -22, 10, 2.0, road, "", MeshFactory.CONCRETE)
 	return Vector3(0.5, 0.0, -1.0)
+
+
+static func get_city_layout() -> Dictionary:
+	var tile := 2.0
+	var north := 8
+	var east := 10
+	var south := 8
+	var west := 10
+	return {
+		"tile": tile,
+		"north": north,
+		"east": east,
+		"south": south,
+		"west": west,
+		"bounds": _kit_road_bounds(tile, north, east, south, west),
+	}
 
 
 static func _build_kit_rect_circuit(
@@ -117,34 +132,6 @@ static func _kit_road_bounds(tile: float, north: int, east: int, south: int, wes
 		"south_end": south_end,
 		"west_z": west_z,
 	}
-
-
-static func _place_city_track_barriers(
-	border: Node3D,
-	kit: String,
-	tile: float,
-	north: int,
-	east: int,
-	south: int,
-	west: int
-) -> void:
-	var bounds := _kit_road_bounds(tile, north, east, south, west)
-	var offset := 1.35
-	for i in range(north):
-		var z := -tile - i * tile
-		_place_kit_road(border, kit, "barrierRed.glb", Vector3(-offset, 0, z), 0.0, false)
-		_place_kit_road(border, kit, "barrierWhite.glb", Vector3(0.35, 0, z), 0.0, false)
-	for i in range(east):
-		var x := tile + i * tile
-		_place_kit_road(border, kit, "barrierRed.glb", Vector3(x, 0, bounds.east_z - offset), 90.0, false)
-	for i in range(south):
-		var z: float = bounds.north_end + i * tile
-		_place_kit_road(border, kit, "barrierWhite.glb", Vector3(bounds.south_x + offset - tile, 0, z), 0.0, false)
-	for i in range(west):
-		var x: float = bounds.south_x - tile - i * tile
-		_place_kit_road(border, kit, "barrierRed.glb", Vector3(x, 0, bounds.west_z + offset), 90.0, false)
-	_place_kit_road(border, kit, "lightColored.glb", Vector3(-1.2, 0, -tile), 90.0, false)
-	_place_kit_road(border, kit, "flagCheckers.glb", Vector3(-1.2, 0, -tile * 2.0), 90.0, false)
 
 
 static func build_nature_circuit(
