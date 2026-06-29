@@ -84,9 +84,15 @@ func _physics_process(delta: float) -> void:
 
 func _reset_car() -> void:
 	var scene_root := get_tree().current_scene
-	var spawn := scene_root.get_node_or_null("SpawnPoint") if scene_root else null
-	if spawn:
-		global_transform = spawn.global_transform
+	if scene_root and scene_root.has_method("get_respawn_transform"):
+		global_transform = scene_root.get_respawn_transform()
+	elif scene_root:
+		var spawn := scene_root.get_node_or_null("SpawnPoint")
+		if spawn:
+			global_transform = spawn.global_transform
+		else:
+			global_position = Vector3(0, 0.6, 0)
+			rotation = Vector3.ZERO
 	else:
 		global_position = Vector3(0, 0.6, 0)
 		rotation = Vector3.ZERO

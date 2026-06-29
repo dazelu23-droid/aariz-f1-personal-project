@@ -15,6 +15,10 @@ func get_track_name() -> String:
 	return "City Streets"
 
 
+func get_path_layout() -> Dictionary:
+	return _RoadBuilder.get_city_layout()
+
+
 func get_world_scale() -> float:
 	return 5.0
 

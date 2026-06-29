@@ -72,22 +72,15 @@ static func get_racing_layout() -> Dictionary:
 	var east := 8
 	var south := 10
 	var west := 10
-	var north_end := -north * tile
-	var east_x := 2.0 + (east - 1) * tile
-	var south_end := -north * tile + south * tile
-	return {
-		"tile": tile,
-		"north": north,
-		"east": east,
-		"south": south,
-		"west": west,
-		"bounds": {
-			"min_x": -1.0,
-			"max_x": east_x + 1.5,
-			"min_z": north_end - 1.5,
-			"max_z": south_end + tile + 1.5,
-		},
-	}
+	var layout := _preview_waypoint_layout(
+		_racing_waypoints(tile, north, east, south, west), tile * 0.5
+	)
+	layout["tile"] = tile
+	layout["north"] = north
+	layout["east"] = east
+	layout["south"] = south
+	layout["west"] = west
+	return layout
 
 
 static func build_city_circuit(

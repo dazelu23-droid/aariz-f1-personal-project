@@ -13,6 +13,10 @@ func get_track_name() -> String:
 	return "Forest Trail"
 
 
+func get_path_layout() -> Dictionary:
+	return _RoadBuilder.get_nature_layout()
+
+
 func get_world_scale() -> float:
 	return 5.0
 

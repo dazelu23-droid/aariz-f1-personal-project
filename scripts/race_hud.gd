@@ -18,7 +18,7 @@ var _timer
 
 func _ready() -> void:
 	_apply_title()
-	hint_label.text = "W/S drive · A/D steer · R reset · Esc menu"
+	hint_label.text = "W/S drive · A/D steer · R checkpoint reset · Esc menu"
 	if timer_path != NodePath():
 		_timer = get_node(timer_path)
 		if _timer:

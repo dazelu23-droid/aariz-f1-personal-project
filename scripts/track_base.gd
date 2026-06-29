@@ -3,6 +3,7 @@ extends Node3D
 
 const CAR_SCENE := preload("res://scenes/racing_car.tscn")
 const FINISH_LINE_SCENE := preload("res://scenes/finish_line.tscn")
+const CHECKPOINT_SCENE := preload("res://scenes/checkpoint.tscn")
 
 @onready var track_root: Node3D = $TrackRoot
 @onready var border_root: Node3D = $BorderRoot
@@ -14,6 +15,8 @@ const FINISH_LINE_SCENE := preload("res://scenes/finish_line.tscn")
 @onready var race_timer: Node = $RaceTimer
 
 var _car: RigidBody3D
+var _respawn_transform: Transform3D
+var _has_respawn_checkpoint := false
 
 
 func _ready() -> void:
@@ -21,6 +24,7 @@ func _ready() -> void:
 	GraphicsSetup.setup_sun(sun, get_theme())
 	_build_track()
 	_apply_world_scale()
+	_setup_checkpoints()
 	_setup_finish_line()
 	_spawn_car()
 	_setup_hud()
@@ -116,6 +120,79 @@ func _setup_hud() -> void:
 
 func get_track_name() -> String:
 	return "Track"
+
+
+func get_path_layout() -> Dictionary:
+	return {}
+
+
+func register_checkpoint(checkpoint_transform: Transform3D) -> void:
+	_respawn_transform = checkpoint_transform
+	_has_respawn_checkpoint = true
+
+
+func get_respawn_transform() -> Transform3D:
+	if _has_respawn_checkpoint:
+		return _respawn_transform
+	return spawn_point.global_transform
+
+
+func _local_path_to_world_transform(local_pos: Vector3, travel_dir: Vector3) -> Transform3D:
+	var s := get_world_scale()
+	var centered := local_pos + get_track_center_offset()
+	const ROAD_TOP_LOCAL := 0.14
+	const CAR_BOTTOM_OFFSET := 0.05
+	var road_y := ROAD_TOP_LOCAL * s + CAR_BOTTOM_OFFSET
+	var world_pos := Vector3(centered.x * s, road_y, centered.z * s)
+	var flat_dir := Vector3(travel_dir.x, 0.0, travel_dir.z)
+	if flat_dir.length_squared() < 0.0001:
+		flat_dir = Vector3(0.0, 0.0, -1.0)
+	else:
+		flat_dir = flat_dir.normalized()
+	var basis := Basis.looking_at(flat_dir, Vector3.UP)
+	return Transform3D(basis, world_pos)
+
+
+func _setup_checkpoints() -> void:
+	var layout := get_path_layout()
+	var samples: Array = layout.get("samples", [])
+	if samples.size() < 3:
+		return
+
+	var tile: float = layout.get("tile", 2.0)
+	var spacing := maxi(3, int(round(5.0 / tile)))
+	var s := get_world_scale()
+
+	var container := Node3D.new()
+	container.name = "Checkpoints"
+	add_child(container)
+
+	var index := 0
+	var sample_idx := spacing
+	while sample_idx < samples.size() - 1:
+		var local_pos: Vector3 = samples[sample_idx]
+		var next_pos: Vector3 = samples[mini(sample_idx + 1, samples.size() - 1)]
+		var travel_dir := next_pos - local_pos
+		if travel_dir.length_squared() < 0.001 and sample_idx + 2 < samples.size():
+			next_pos = samples[sample_idx + 2]
+			travel_dir = next_pos - local_pos
+		if travel_dir.length_squared() < 0.001:
+			sample_idx += spacing
+			continue
+
+		var checkpoint := CHECKPOINT_SCENE.instantiate() as Area3D
+		checkpoint.name = "Checkpoint_%d" % index
+		checkpoint.track_base_path = get_path()
+		checkpoint.transform = _local_path_to_world_transform(local_pos, travel_dir)
+
+		var collision := checkpoint.get_node_or_null("CollisionShape3D") as CollisionShape3D
+		if collision and collision.shape is BoxShape3D:
+			var shape := collision.shape as BoxShape3D
+			shape.size = Vector3(3.6 * s, 2.5, 3.2 * s)
+
+		container.add_child(checkpoint)
+		index += 1
+		sample_idx += spacing
 
 
 func _input(event: InputEvent) -> void:
