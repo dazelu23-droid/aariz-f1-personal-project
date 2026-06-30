@@ -78,6 +78,12 @@ func _physics_process(delta: float) -> void:
 		angular_velocity = Vector3.ZERO
 		return
 
+	var track := get_tree().current_scene
+	if track and track.has_method("is_race_finished") and track.is_race_finished():
+		linear_velocity = Vector3.ZERO
+		angular_velocity = Vector3.ZERO
+		return
+
 	var throttle := 0.0
 	var steer := 0.0
 	if is_ai:

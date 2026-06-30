@@ -23,6 +23,7 @@ var _has_respawn_checkpoint := false
 var _countdown_active := false
 var _countdown_index := 0
 var _countdown_step_timer := 0.0
+var _race_finished := false
 
 
 func _ready() -> void:
@@ -54,6 +55,10 @@ func _process(delta: float) -> void:
 
 func is_race_started() -> bool:
 	return not _countdown_active
+
+
+func is_race_finished() -> bool:
+	return _race_finished
 
 
 func get_countdown_text() -> String:
@@ -176,6 +181,25 @@ func _setup_finish_line() -> void:
 	col.shape = shape
 	finish.add_child(col)
 	add_child(finish)
+	_add_finish_line_visuals()
+
+
+func _add_finish_line_visuals() -> void:
+	var layout := get_path_layout()
+	var samples: Array = layout.get("samples", [])
+	if samples.is_empty():
+		return
+	var start: Vector3 = samples[0] if samples[0] is Vector3 else Vector3.ZERO
+	var road_width: float = layout.get("width", 5.5)
+	var travel_dir := Vector3(0.0, 0.0, -1.0)
+	if samples.size() > 1:
+		var delta: Vector3 = samples[1] - start
+		delta.y = 0.0
+		if delta.length_squared() > 0.01:
+			travel_dir = delta.normalized()
+	var line_center := start + travel_dir * 1.6 + Vector3(0.0, 0.16, 0.0)
+	var face := rad_to_deg(atan2(travel_dir.x, travel_dir.z))
+	MeshFactory.add_finish_line_markers(track_root, line_center, road_width, face)
 
 
 func _spawn_car() -> void:
@@ -196,6 +220,16 @@ func _setup_hud() -> void:
 	if hud:
 		hud.track_name = get_track_name()
 		hud.timer_path = race_timer.get_path()
+	if race_timer is RaceTimer:
+		(race_timer as RaceTimer).race_won.connect(_on_race_won)
+
+
+func _on_race_won(total_time: float) -> void:
+	_race_finished = true
+	_set_all_cars_frozen(true)
+	var hud := $HUD
+	if hud and hud.has_method("show_win_screen"):
+		hud.show_win_screen(total_time)
 
 
 func get_track_name() -> String:

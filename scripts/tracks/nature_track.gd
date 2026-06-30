@@ -103,7 +103,7 @@ func _spawn_ai_opponents() -> void:
 		car.global_transform = _local_path_to_world_transform(local_pos, travel_dir)
 
 		var driver := _AIDriver.new()
-		driver.setup(car, samples, profile, self)
+		driver.setup(car, samples, profile, self, sample_idx)
 		car.add_child(driver)
 		add_child(car)
 		_ai_cars.append(car)

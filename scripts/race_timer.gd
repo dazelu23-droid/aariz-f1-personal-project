@@ -2,6 +2,9 @@ class_name RaceTimer
 extends Node
 
 signal lap_completed(lap_number: int, lap_time: float)
+signal race_won(total_time: float)
+
+const WIN_LAPS := 3
 
 var elapsed_time := 0.0
 var lap_count := 0
@@ -10,6 +13,7 @@ var last_lap_time := 0.0
 var _current_lap_start := 0.0
 var _armed := false
 var _cooldown := 0.0
+var _won := false
 
 
 func _process(delta: float) -> void:
@@ -21,6 +25,7 @@ func _process(delta: float) -> void:
 
 func arm() -> void:
 	_armed = true
+	_won = false
 	elapsed_time = 0.0
 	_current_lap_start = 0.0
 	lap_count = 0
@@ -29,8 +34,12 @@ func arm() -> void:
 	_cooldown = 4.0
 
 
+func has_won() -> bool:
+	return _won
+
+
 func on_finish_line_crossed() -> void:
-	if not _armed or _cooldown > 0.0:
+	if not _armed or _cooldown > 0.0 or _won:
 		return
 
 	_cooldown = 2.0
@@ -43,6 +52,10 @@ func on_finish_line_crossed() -> void:
 		best_lap_time = last_lap_time
 	_current_lap_start = elapsed_time
 	lap_completed.emit(lap_count, last_lap_time)
+	if lap_count >= WIN_LAPS:
+		_won = true
+		_armed = false
+		race_won.emit(elapsed_time)
 
 
 func format_time(seconds: float) -> String:

@@ -343,6 +343,10 @@ static func build_nature_circuit(
 		layout.bounds,
 		nature + "ground_grass.fbx"
 	)
+	var start: Vector3 = waypoints[0]
+	MeshFactory.add_start_finish_line(
+		track, start + Vector3(0.5, SLAB_H + 0.02, -1.6), width
+	)
 	return waypoints[0] + Vector3(0.5, 0.0, -0.5)
 
 
