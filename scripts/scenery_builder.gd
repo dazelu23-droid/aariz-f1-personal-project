@@ -245,8 +245,6 @@ static func _place_pit_complex(props: Node3D, kit: String, layout: Dictionary) -
 	var idx := 0
 	while z >= -70.0:
 		_place(props, kit, garages[idx % garages.size()], Vector3(pit_x, 0, z), 90.0)
-		if idx % 3 == 0:
-			_place(props, kit, "fenceStraight.glb", Vector3(-4.8, 0, z), 90.0)
 		if idx % 4 == 1:
 			_place(props, kit, "barrierRed.glb", Vector3(-5.8, 0, z + 0.6), 90.0)
 		z -= 2.6

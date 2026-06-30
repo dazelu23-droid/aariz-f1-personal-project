@@ -46,20 +46,38 @@ static func place_piece(
 	position: Vector3,
 	rotation_y_deg: float = 0.0,
 	with_collision: bool = false,
-	piece_scale: Vector3 = Vector3.ONE
+	piece_scale: Vector3 = Vector3.ONE,
+	rotation_x_deg: float = 0.0,
+	collision_box_size: Vector3 = Vector3.ZERO
 ) -> Node3D:
 	var piece := create_model(path, texture_path)
 	piece.position = position
-	piece.rotation_degrees.y = rotation_y_deg
+	piece.rotation_degrees = Vector3(rotation_x_deg, rotation_y_deg, 0.0)
 	piece.scale = piece_scale
 	piece.position.y = 0.03
 	parent.add_child(piece)
 
 	if with_collision:
-		for mesh_node in _find_all_mesh_instances(piece):
-			add_static_collision(mesh_node)
+		if collision_box_size != Vector3.ZERO:
+			_add_local_collision_box(piece, collision_box_size)
+		else:
+			for mesh_node in _find_all_mesh_instances(piece):
+				add_static_collision(mesh_node)
 
 	return piece
+
+
+static func _add_local_collision_box(parent: Node3D, size: Vector3) -> void:
+	var body := StaticBody3D.new()
+	body.collision_layer = 1
+	body.collision_mask = 0
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collision.shape = shape
+	collision.position = Vector3(0.0, size.y * 0.5, 0.0)
+	body.add_child(collision)
+	parent.add_child(body)
 
 
 static func add_ground(parent: Node3D, color: Color, size: float, height: float = 0.4) -> StaticBody3D:
