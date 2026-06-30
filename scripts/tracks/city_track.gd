@@ -36,7 +36,7 @@ func get_ground_color() -> Color:
 func get_ground_size() -> float:
 	var layout: Dictionary = _RoadBuilder.get_city_layout()
 	var bounds: Dictionary = layout.bounds
-	return maxf(bounds.max_x - bounds.min_x, bounds.max_z - bounds.min_z) + 180.0
+	return maxf(bounds.max_x - bounds.min_x, bounds.max_z - bounds.min_z) + 240.0
 
 
 func get_horizon_color() -> Color:

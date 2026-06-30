@@ -87,8 +87,8 @@ static func build_city_circuit(
 ) -> Vector3:
 	var tile := 2.0
 	_begin_road_build(KIT_TILE if kit != "" else tile)
-	var width := 3.2
-	var waypoints: Array = _chamfer_waypoints(_city_street_waypoints(), 2.2)
+	var width := 3.4
+	var waypoints: Array = _chamfer_waypoints(_city_street_waypoints(), 1.8)
 	var layout: Dictionary = _build_waypoint_circuit(
 		track, border, waypoints, tile, width, true, MeshFactory.ASPHALT, kit
 	)
@@ -98,10 +98,10 @@ static func build_city_circuit(
 	)
 	_fill_ground_excluding(
 		fill,
-		layout.bounds.min_x - 36,
-		layout.bounds.max_x + 36,
-		layout.bounds.min_z - 36,
-		layout.bounds.max_z + 36,
+		layout.bounds.min_x - 52,
+		layout.bounds.max_x + 52,
+		layout.bounds.min_z - 52,
+		layout.bounds.max_z + 52,
 		2.0,
 		layout.bounds,
 		"",
@@ -111,44 +111,77 @@ static func build_city_circuit(
 
 
 static func get_city_layout() -> Dictionary:
-	var layout := _preview_waypoint_layout(_chamfer_waypoints(_city_street_waypoints(), 2.2), 2.0)
-	layout["width"] = 3.2
+	var layout := _preview_waypoint_layout(_chamfer_waypoints(_city_street_waypoints(), 1.8), 2.0)
+	layout["width"] = 3.4
 	return layout
 
 
 static func _city_street_waypoints() -> Array:
-	# Grid-style downtown loop with many 90-degree street corners.
+	# ~580 local units — about a 60 s lap at world scale 5 with average race speed.
 	return [
 		Vector3(0, 0, 0),
-		Vector3(0, 0, -14),
-		Vector3(10, 0, -20),
-		Vector3(22, 0, -20),
-		Vector3(30, 0, -12),
-		Vector3(30, 0, 2),
-		Vector3(30, 0, 16),
-		Vector3(20, 0, 22),
-		Vector3(8, 0, 22),
-		Vector3(-4, 0, 16),
-		Vector3(-12, 0, 6),
-		Vector3(-12, 0, -6),
-		Vector3(-6, 0, -14),
+		Vector3(0, 0, -52),
+		Vector3(14, 0, -66),
+		Vector3(36, 0, -66),
+		Vector3(52, 0, -52),
+		Vector3(52, 0, -28),
+		Vector3(44, 0, -14),
+		Vector3(52, 0, 2),
+		Vector3(52, 0, 28),
+		Vector3(52, 0, 52),
+		Vector3(36, 0, 66),
+		Vector3(12, 0, 66),
+		Vector3(-12, 0, 66),
+		Vector3(-36, 0, 66),
+		Vector3(-52, 0, 52),
+		Vector3(-52, 0, 28),
+		Vector3(-44, 0, 14),
+		Vector3(-52, 0, -2),
+		Vector3(-52, 0, -28),
+		Vector3(-52, 0, -52),
+		Vector3(-36, 0, -66),
+		Vector3(-12, 0, -66),
+		Vector3(0, 0, -52),
 		Vector3(0, 0, 0),
 	]
 
 
 static func _nature_trail_waypoints() -> Array:
+	# ~560 local units — winding forest loop, ~60 s lap at world scale 5.
 	return [
 		Vector3(0, 0, 0),
-		Vector3(0, 0, -10),
-		Vector3(6, 0, -15),
-		Vector3(14, 0, -14),
-		Vector3(18, 0, -6),
-		Vector3(16, 0, 4),
-		Vector3(10, 0, 12),
-		Vector3(0, 0, 14),
-		Vector3(-8, 0, 10),
-		Vector3(-12, 0, 2),
-		Vector3(-8, 0, -6),
+		Vector3(0, 0, -38),
+		Vector3(12, 0, -54),
+		Vector3(30, 0, -58),
+		Vector3(48, 0, -48),
+		Vector3(58, 0, -30),
+		Vector3(60, 0, -10),
+		Vector3(54, 0, 12),
+		Vector3(42, 0, 32),
+		Vector3(24, 0, 48),
+		Vector3(2, 0, 56),
+		Vector3(-22, 0, 54),
+		Vector3(-42, 0, 42),
+		Vector3(-56, 0, 24),
+		Vector3(-60, 0, 2),
+		Vector3(-54, 0, -20),
+		Vector3(-40, 0, -38),
+		Vector3(-22, 0, -50),
+		Vector3(-6, 0, -54),
+		Vector3(10, 0, -48),
+		Vector3(24, 0, -36),
+		Vector3(34, 0, -20),
+		Vector3(38, 0, -2),
+		Vector3(32, 0, 16),
+		Vector3(18, 0, 30),
+		Vector3(0, 0, 38),
+		Vector3(-16, 0, 36),
+		Vector3(-30, 0, 26),
+		Vector3(-38, 0, 10),
+		Vector3(-36, 0, -8),
+		Vector3(-24, 0, -24),
+		Vector3(-8, 0, -34),
+		Vector3(0, 0, -38),
 		Vector3(0, 0, 0),
 	]
 
@@ -294,17 +327,17 @@ static func build_nature_circuit(
 ) -> Vector3:
 	var tile := 1.25
 	_begin_road_build(tile)
-	var width := 2.6
-	var waypoints: Array = _chamfer_waypoints(_nature_trail_waypoints(), 1.6)
+	var width := 2.8
+	var waypoints: Array = _chamfer_waypoints(_nature_trail_waypoints(), 1.4)
 	var layout: Dictionary = _build_waypoint_circuit(
 		track, border, waypoints, tile, width, false, MeshFactory.DIRT, ""
 	)
 	_fill_ground_excluding(
 		fill,
-		layout.bounds.min_x - 28,
-		layout.bounds.max_x + 28,
-		layout.bounds.min_z - 28,
-		layout.bounds.max_z + 28,
+		layout.bounds.min_x - 48,
+		layout.bounds.max_x + 48,
+		layout.bounds.min_z - 48,
+		layout.bounds.max_z + 48,
 		1.0,
 		layout.bounds,
 		nature + "ground_grass.fbx"
@@ -313,8 +346,8 @@ static func build_nature_circuit(
 
 
 static func get_nature_layout() -> Dictionary:
-	var layout: Dictionary = _preview_waypoint_layout(_chamfer_waypoints(_nature_trail_waypoints(), 1.6), 1.25)
-	layout["width"] = 2.6
+	var layout: Dictionary = _preview_waypoint_layout(_chamfer_waypoints(_nature_trail_waypoints(), 1.4), 1.25)
+	layout["width"] = 2.8
 	return layout
 
 
