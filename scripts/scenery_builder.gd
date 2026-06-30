@@ -186,12 +186,12 @@ static func _place_nature_lake(
 	samples: Array,
 	road_width: float
 ) -> void:
-	var candidates := [
+	var candidates: Array[Vector3] = [
 		Vector3(44.0, 0.0, -42.0),
 		Vector3(-46.0, 0.0, 40.0),
 		Vector3(48.0, 0.0, 36.0),
 	]
-	var lake_center := candidates[0]
+	var lake_center: Vector3 = candidates[0]
 	for candidate in candidates:
 		if not _near_path(candidate, samples, road_width * 0.5 + 12.0):
 			lake_center = candidate
@@ -200,7 +200,7 @@ static func _place_nature_lake(
 	const TILE := 1.0
 	const LAKE_W := 9
 	const LAKE_D := 7
-	var origin := lake_center - Vector3(LAKE_W * TILE * 0.5, 0.0, LAKE_D * TILE * 0.5)
+	var origin: Vector3 = lake_center - Vector3(LAKE_W * TILE * 0.5, 0.0, LAKE_D * TILE * 0.5)
 
 	for ix in range(LAKE_W):
 		for iz in range(LAKE_D):
