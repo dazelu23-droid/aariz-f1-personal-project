@@ -222,14 +222,17 @@ static func _place_nature_lake(
 
 	for ix in range(-1, LAKE_W + 1):
 		for iz in range(-1, LAKE_D + 1):
-			var pos := origin + Vector3(ix * TILE, 0.0, iz * TILE)
+			var pos: Vector3 = origin + Vector3(ix * TILE, 0.0, iz * TILE)
 			var on_shore := ix < 0 or iz < 0 or ix >= LAKE_W or iz >= LAKE_D
 			if not on_shore:
 				continue
 			if _near_path(pos, samples, road_width * 0.5 + 4.0):
 				continue
-			for offset in [Vector3(pad, 0, 0), Vector3(-pad, 0, 0), Vector3(0, 0, pad), Vector3(0, 0, -pad)]:
-				var shore_pos := pos + offset
+			var offsets: Array[Vector3] = [
+				Vector3(pad, 0, 0), Vector3(-pad, 0, 0), Vector3(0, 0, pad), Vector3(0, 0, -pad),
+			]
+			for offset in offsets:
+				var shore_pos: Vector3 = pos + offset
 				if _near_path(shore_pos, samples, road_width * 0.5 + 3.5):
 					continue
 				if rng.randf() < 0.55:
