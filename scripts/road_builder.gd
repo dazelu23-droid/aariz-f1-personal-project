@@ -147,41 +147,44 @@ static func _city_street_waypoints() -> Array:
 
 
 static func _nature_trail_waypoints() -> Array:
-	# ~560 local units — winding forest loop, ~60 s lap at world scale 5.
+	const BRIDGE_Y := 3.6
+	const CROSS_Z := -14.0
 	return [
 		Vector3(0, 0, 0),
-		Vector3(0, 0, -38),
-		Vector3(12, 0, -54),
-		Vector3(30, 0, -58),
-		Vector3(48, 0, -48),
-		Vector3(58, 0, -30),
-		Vector3(60, 0, -10),
-		Vector3(54, 0, 12),
-		Vector3(42, 0, 32),
-		Vector3(24, 0, 48),
-		Vector3(2, 0, 56),
-		Vector3(-22, 0, 54),
-		Vector3(-42, 0, 42),
-		Vector3(-56, 0, 24),
-		Vector3(-60, 0, 2),
-		Vector3(-54, 0, -20),
-		Vector3(-40, 0, -38),
-		Vector3(-22, 0, -50),
-		Vector3(-6, 0, -54),
-		Vector3(10, 0, -48),
-		Vector3(24, 0, -36),
-		Vector3(34, 0, -20),
-		Vector3(38, 0, -2),
-		Vector3(32, 0, 16),
-		Vector3(18, 0, 30),
-		Vector3(0, 0, 38),
-		Vector3(-16, 0, 36),
-		Vector3(-30, 0, 26),
-		Vector3(-38, 0, 10),
-		Vector3(-36, 0, -8),
-		Vector3(-24, 0, -24),
-		Vector3(-8, 0, -34),
-		Vector3(0, 0, -38),
+		Vector3(0, 0, 8),
+		Vector3(12, 0, 22),
+		Vector3(30, 0, 34),
+		Vector3(48, 0, 36),
+		Vector3(60, 0, 20),
+		Vector3(62, 0, -2),
+		Vector3(50, 0, -24),
+		Vector3(30, 0, -40),
+		Vector3(6, 0, -46),
+		Vector3(-20, 0, -44),
+		Vector3(-40, 0, -30),
+		Vector3(-54, 0, -10),
+		Vector3(-56, 0, 14),
+		Vector3(-42, 0, 34),
+		Vector3(-20, 0, 44),
+		Vector3(6, 0, 44),
+		Vector3(28, 0, 34),
+		Vector3(38, 0, 16),
+		Vector3(32, 0, 0),
+		Vector3(18, 0, CROSS_Z),
+		Vector3(6, 0, CROSS_Z),
+		Vector3(-6, 0, CROSS_Z),
+		Vector3(-18, 0, CROSS_Z),
+		Vector3(-30, 0, CROSS_Z - 2),
+		Vector3(-30, 0, -4),
+		Vector3(-16, 0, 0),
+		Vector3(-4, 0, 4),
+		Vector3(0, 0, 6),
+		Vector3(0, 1.0, 2),
+		Vector3(0, BRIDGE_Y, -4),
+		Vector3(0, BRIDGE_Y, -10),
+		Vector3(0, BRIDGE_Y, 8),
+		Vector3(0, 1.0, 14),
+		Vector3(0, 0, 22),
 		Vector3(0, 0, 0),
 	]
 
@@ -224,6 +227,7 @@ static func _build_waypoint_circuit(
 			var t0 := float(step) / float(steps)
 			var t1 := float(step + 1) / float(steps)
 			var anchor := a + dir * (seg_len * t0)
+			anchor.y = lerpf(a.y, b.y, t0)
 			var center := a.lerp(b, (t0 + t1) * 0.5)
 			var is_corner := step == steps - 1 and rot != next_rot
 			_tile(
@@ -342,7 +346,34 @@ static func build_nature_circuit(
 		layout.bounds,
 		nature + "ground_grass.fbx"
 	)
+	_place_nature_crossing(track, nature, width)
 	return waypoints[0] + Vector3(0.5, 0.0, -0.5)
+
+
+static func get_nature_finish_pose() -> Dictionary:
+	return {
+		"local_pos": Vector3(0.5, 0.0, -14.0),
+		"travel_dir": Vector3(1.0, 0.0, 0.0),
+	}
+
+
+static func _place_nature_crossing(track: Node3D, nature: String, width: float) -> void:
+	const BRIDGE_Y := 3.6
+	const CROSS_Z := -14.0
+	MeshFactory.add_start_finish_line(
+		track, Vector3(0.5, SLAB_H + 0.03, CROSS_Z), width
+	)
+	for pillar_x in [-5.0, 0.0, 5.0]:
+		var pillar := MeshFactory.create_model(nature + "cliff_block_stone.fbx", "")
+		pillar.position = Vector3(pillar_x, BRIDGE_Y * 0.5, CROSS_Z)
+		pillar.scale = Vector3(1.4, BRIDGE_Y * 0.55, 1.4)
+		track.add_child(pillar)
+	for span_x in range(-6, 7, 3):
+		var span := MeshFactory.create_model(nature + "bridge_stone.fbx", "")
+		span.position = Vector3(float(span_x), BRIDGE_Y - 0.35, -2.0)
+		span.rotation_degrees.y = 90.0
+		span.scale = Vector3(1.2, 1.0, 1.2)
+		track.add_child(span)
 
 
 static func get_nature_layout() -> Dictionary:
@@ -443,7 +474,10 @@ static func _aabb_overlaps(a: Dictionary, b: Dictionary, margin: float = 0.12) -
 
 static func _road_already_covered(spec: Dictionary, rot_y: float) -> bool:
 	var aabb := _aabb_from_spec(spec, rot_y)
+	var center_y: float = spec.center.y
 	for existing in _placed_road_aabbs:
+		if absf(existing.get("center_y", 0.0) - center_y) > SLAB_H * 1.35:
+			continue
 		if _aabb_overlaps(aabb, existing):
 			return true
 	return false
@@ -477,7 +511,9 @@ static func _finish_kit_road_visuals(track: Node3D, kit: String) -> void:
 
 
 static func _register_road_aabb(spec: Dictionary, rot_y: float) -> void:
-	_placed_road_aabbs.append(_aabb_from_spec(spec, rot_y))
+	var aabb := _aabb_from_spec(spec, rot_y)
+	aabb["center_y"] = spec.center.y
+	_placed_road_aabbs.append(aabb)
 
 
 static func _stamp_spec_to_collision_grid(spec: Dictionary, rot_y: float) -> void:

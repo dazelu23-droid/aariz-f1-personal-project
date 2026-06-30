@@ -20,7 +20,7 @@ func _physics_process(_delta: float) -> void:
 
 	var inside := false
 	for body in get_overlapping_bodies():
-		if body is RigidBody3D:
+		if body is RigidBody3D and body.is_in_group("player_car"):
 			inside = true
 			break
 

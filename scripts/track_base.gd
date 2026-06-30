@@ -77,12 +77,25 @@ func get_horizon_color() -> Color:
 func _set_spawn(local_pos: Vector3, face_negative_z: bool = true) -> void:
 	var s := get_world_scale()
 	var centered := local_pos + get_track_center_offset()
-	# Road slabs live on track_root (scaled); car sits on TrackBase in world space.
 	const ROAD_TOP_LOCAL := 0.14
 	const CAR_BOTTOM_OFFSET := 0.05
-	var road_y := ROAD_TOP_LOCAL * s + CAR_BOTTOM_OFFSET
+	var road_y := (local_pos.y + ROAD_TOP_LOCAL) * s + CAR_BOTTOM_OFFSET
 	spawn_point.position = Vector3(centered.x * s, road_y, centered.z * s)
 	spawn_point.rotation_degrees.y = 0.0 if face_negative_z else 180.0
+
+
+func get_finish_line_pose() -> Dictionary:
+	return {}
+
+
+func global_to_track_local(world_pos: Vector3) -> Vector3:
+	var s := get_world_scale()
+	var origin := get_track_center_offset() * s
+	return Vector3(
+		(world_pos.x - origin.x) / s,
+		world_pos.y / s,
+		(world_pos.z - origin.z) / s
+	)
 
 
 func _setup_finish_line() -> void:
@@ -91,10 +104,20 @@ func _setup_finish_line() -> void:
 	var s := get_world_scale()
 	var layout := get_path_layout()
 	var road_width: float = layout.get("width", 5.5)
-	finish.position = spawn_point.position
-	finish.rotation = spawn_point.rotation
+	var pose := get_finish_line_pose()
+	var travel_dir := Vector3(0.0, 0.0, -1.0)
+	if pose.has("local_pos") and pose.has("travel_dir"):
+		travel_dir = pose["travel_dir"]
+		finish.global_transform = _local_path_to_world_transform(pose["local_pos"], travel_dir)
+	else:
+		finish.position = spawn_point.position
+		finish.rotation = spawn_point.rotation
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(road_width * s * 1.15, 2.5, 4.0 * s)
+	var along_x := absf(travel_dir.x) >= absf(travel_dir.z)
+	if along_x:
+		shape.size = Vector3(4.0 * s, 2.5, road_width * s * 1.15)
+	else:
+		shape.size = Vector3(road_width * s * 1.15, 2.5, 4.0 * s)
 	var col := CollisionShape3D.new()
 	col.shape = shape
 	finish.add_child(col)
@@ -129,7 +152,7 @@ func get_path_layout() -> Dictionary:
 	return {}
 
 
-func get_road_surface_height() -> float:
+func get_road_surface_height(at_global: Vector3 = Vector3.ZERO) -> float:
 	const ROAD_TOP_LOCAL := 0.14
 	const CAR_RIDE_HEIGHT := 0.05
 	return ROAD_TOP_LOCAL * get_world_scale() + CAR_RIDE_HEIGHT
@@ -151,7 +174,7 @@ func _local_path_to_world_transform(local_pos: Vector3, travel_dir: Vector3) -> 
 	var centered := local_pos + get_track_center_offset()
 	const ROAD_TOP_LOCAL := 0.14
 	const CAR_BOTTOM_OFFSET := 0.05
-	var road_y := ROAD_TOP_LOCAL * s + CAR_BOTTOM_OFFSET
+	var road_y := (local_pos.y + ROAD_TOP_LOCAL) * s + CAR_BOTTOM_OFFSET
 	var world_pos := Vector3(centered.x * s, road_y, centered.z * s)
 	var flat_dir := Vector3(travel_dir.x, 0.0, travel_dir.z)
 	if flat_dir.length_squared() < 0.0001:

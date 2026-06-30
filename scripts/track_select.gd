@@ -25,8 +25,34 @@ var _car_buttons: Array[Button] = []
 
 
 func _ready() -> void:
+	_build_ai_difficulty_selector()
 	_build_car_cards()
 	_build_cards()
+
+
+func _build_ai_difficulty_selector() -> void:
+	var vbox := $Center/Panel/Margin/VBox
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+
+	var label := Label.new()
+	label.text = "AI Difficulty"
+	label.add_theme_font_size_override("font_size", 20)
+	row.add_child(label)
+
+	var option := OptionButton.new()
+	option.custom_minimum_size = Vector2(220, 0)
+	for i in GameSettings.AI_DIFFICULTIES.size():
+		var profile: Dictionary = GameSettings.AI_DIFFICULTIES[i]
+		option.add_item(profile.name, i)
+	option.selected = GameSettings.selected_ai_difficulty
+	option.item_selected.connect(_on_ai_difficulty_selected)
+	row.add_child(option)
+
+	var track_label := vbox.get_node("TrackLabel")
+	vbox.add_child(row)
+	vbox.move_child(row, track_label.get_index())
 
 
 func _build_car_cards() -> void:
@@ -87,6 +113,10 @@ func _on_car_pressed(index: int) -> void:
 		var btn: Button = _car_buttons[i]
 		btn.button_pressed = i == index
 		btn.text = "Selected" if i == index else "Select"
+
+
+func _on_ai_difficulty_selected(index: int) -> void:
+	GameSettings.set_ai_difficulty(index)
 
 
 func _build_cards() -> void:
