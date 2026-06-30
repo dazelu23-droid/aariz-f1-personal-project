@@ -165,18 +165,83 @@ static func populate_nature(props: Node3D, nature: String) -> void:
 	var layout: Dictionary = RoadBuilder.get_nature_layout()
 	var road: Dictionary = layout.bounds
 	var samples: Array = layout.get("samples", [])
-	var road_width: float = layout.get("width", 2.6)
+	var road_width: float = layout.get("width", 2.8)
 	_fill_grid(
 		props,
 		nature + "ground_grass.fbx",
-		road.min_x - 24,
-		road.max_x + 24,
-		road.min_z - 24,
-		road.max_z + 24,
+		road.min_x - 40,
+		road.max_x + 40,
+		road.min_z - 40,
+		road.max_z + 40,
 		1.0,
 		road
 	)
+	_place_nature_lake(props, nature, samples, road_width)
 	_scatter_nature_props(props, nature, road, samples, road_width)
+
+
+static func _place_nature_lake(
+	props: Node3D,
+	nature: String,
+	samples: Array,
+	road_width: float
+) -> void:
+	var candidates := [
+		Vector3(44.0, 0.0, -42.0),
+		Vector3(-46.0, 0.0, 40.0),
+		Vector3(48.0, 0.0, 36.0),
+	]
+	var lake_center := candidates[0]
+	for candidate in candidates:
+		if not _near_path(candidate, samples, road_width * 0.5 + 12.0):
+			lake_center = candidate
+			break
+
+	const TILE := 1.0
+	const LAKE_W := 9
+	const LAKE_D := 7
+	var origin := lake_center - Vector3(LAKE_W * TILE * 0.5, 0.0, LAKE_D * TILE * 0.5)
+
+	for ix in range(LAKE_W):
+		for iz in range(LAKE_D):
+			var pos := origin + Vector3(ix * TILE, -0.05, iz * TILE)
+			if _near_path(pos, samples, road_width * 0.5 + 5.5):
+				continue
+			var edge := ix == 0 or iz == 0 or ix == LAKE_W - 1 or iz == LAKE_D - 1
+			var tile := "ground_riverSide.fbx" if edge else "ground_riverTile.fbx"
+			_place(props, nature, tile, pos, 0.0)
+
+	var shore_models := [
+		"rock_largeA.fbx", "rock_largeB.fbx", "rock_largeC.fbx",
+		"stone_largeE.fbx", "stone_tallD.fbx", "rock_tallE.fbx",
+	]
+	var bush_models := ["plant_bush.fbx", "plant_bushSmall.fbx", "grass_large.fbx"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 44012
+	var pad := 2.5
+
+	for ix in range(-1, LAKE_W + 1):
+		for iz in range(-1, LAKE_D + 1):
+			var pos := origin + Vector3(ix * TILE, 0.0, iz * TILE)
+			var on_shore := ix < 0 or iz < 0 or ix >= LAKE_W or iz >= LAKE_D
+			if not on_shore:
+				continue
+			if _near_path(pos, samples, road_width * 0.5 + 4.0):
+				continue
+			for offset in [Vector3(pad, 0, 0), Vector3(-pad, 0, 0), Vector3(0, 0, pad), Vector3(0, 0, -pad)]:
+				var shore_pos := pos + offset
+				if _near_path(shore_pos, samples, road_width * 0.5 + 3.5):
+					continue
+				if rng.randf() < 0.55:
+					var rock: String = shore_models[rng.randi_range(0, shore_models.size() - 1)]
+					_place(
+						props, nature, rock, shore_pos,
+						rng.randf_range(0.0, 360.0),
+						Vector3.ONE * rng.randf_range(0.85, 1.25)
+					)
+				elif rng.randf() < 0.4:
+					var bush: String = bush_models[rng.randi_range(0, bush_models.size() - 1)]
+					_place(props, nature, bush, shore_pos, rng.randf_range(0.0, 360.0))
 
 
 static func _scatter_nature_props(
@@ -190,15 +255,19 @@ static func _scatter_nature_props(
 		return
 
 	var tree_models := [
-		"tree_default.fbx", "tree_pineDefaultA.fbx", "tree_oak.fbx",
-		"tree_cone.fbx", "tree_pineDefaultB.fbx", "tree_detailed.fbx",
+		"tree_default.fbx", "tree_pineDefaultA.fbx", "tree_pineDefaultB.fbx",
+		"tree_oak.fbx", "tree_cone.fbx", "tree_detailed.fbx",
+		"tree_pineTallB.fbx", "tree_pineRoundA.fbx", "tree_small.fbx",
+		"tree_thin.fbx", "tree_blocks.fbx", "stump_old.fbx",
 	]
 	var rock_models := [
 		"rock_largeA.fbx", "rock_largeB.fbx", "rock_largeC.fbx",
 		"rock_smallA.fbx", "rock_smallB.fbx", "rock_smallC.fbx",
+		"rock_tallE.fbx", "rock_smallFlatA.fbx",
+		"stone_largeE.fbx", "stone_smallA.fbx", "stone_tallD.fbx",
 	]
 	var path_clearance: float = road_width * 0.5 + 2.4
-	var pad := 4.0
+	var pad := 6.0
 	var min_x: float = road.min_x - pad
 	var max_x: float = road.max_x + pad
 	var min_z: float = road.min_z - pad
@@ -208,19 +277,19 @@ static func _scatter_nature_props(
 	rng.seed = 90210
 
 	var placed := 0
-	var max_props := 140
+	var max_props := 340
 	var attempts := 0
-	var max_attempts := 900
+	var max_attempts := 2400
 
 	while placed < max_props and attempts < max_attempts:
 		attempts += 1
 		var pos := Vector3(rng.randf_range(min_x, max_x), 0.0, rng.randf_range(min_z, max_z))
 		if _near_path(pos, samples, path_clearance):
 			continue
-		if rng.randf() > 0.62:
+		if rng.randf() > 0.48:
 			continue
 
-		var use_rock := rng.randf() < 0.34
+		var use_rock := rng.randf() < 0.38
 		var models: Array = rock_models if use_rock else tree_models
 		var model: String = models[rng.randi_range(0, models.size() - 1)]
 		var rot := rng.randf_range(0.0, 360.0)
