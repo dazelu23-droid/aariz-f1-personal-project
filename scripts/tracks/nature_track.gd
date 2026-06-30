@@ -20,10 +20,6 @@ func get_path_layout() -> Dictionary:
 	return _RoadBuilder.get_nature_layout()
 
 
-func get_finish_line_pose() -> Dictionary:
-	return _RoadBuilder.get_nature_finish_pose()
-
-
 func get_world_scale() -> float:
 	return 5.0
 
@@ -48,32 +44,6 @@ func get_ground_size() -> float:
 func _add_track_ground() -> void:
 	var size := get_ground_size()
 	MeshFactory.add_ground(self, get_ground_color(), size)
-
-
-func get_road_surface_height(at_global: Vector3 = Vector3.ZERO) -> float:
-	const ROAD_TOP_LOCAL := 0.14
-	const CAR_RIDE_HEIGHT := 0.05
-	var s := get_world_scale()
-	if at_global == Vector3.ZERO:
-		return ROAD_TOP_LOCAL * s + CAR_RIDE_HEIGHT
-
-	var local := global_to_track_local(at_global)
-	var samples: Array = get_path_layout().get("samples", [])
-	if samples.is_empty():
-		return ROAD_TOP_LOCAL * s + CAR_RIDE_HEIGHT
-
-	var best_dist: float = INF
-	var best_y := 0.0
-	for sample in samples:
-		if not (sample is Vector3):
-			continue
-		var point: Vector3 = sample
-		var dist: float = Vector2(local.x - point.x, local.z - point.z).length_squared()
-		if dist < best_dist:
-			best_dist = dist
-			best_y = point.y
-
-	return (best_y + ROAD_TOP_LOCAL) * s + CAR_RIDE_HEIGHT
 
 
 func _build_track() -> void:

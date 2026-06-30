@@ -147,44 +147,41 @@ static func _city_street_waypoints() -> Array:
 
 
 static func _nature_trail_waypoints() -> Array:
-	const BRIDGE_Y := 3.6
-	const CROSS_Z := -14.0
+	# Winding forest loop with turns only — no cross-section or overpass.
 	return [
 		Vector3(0, 0, 0),
-		Vector3(0, 0, 8),
-		Vector3(12, 0, 22),
-		Vector3(30, 0, 34),
-		Vector3(48, 0, 36),
-		Vector3(60, 0, 20),
-		Vector3(62, 0, -2),
-		Vector3(50, 0, -24),
-		Vector3(30, 0, -40),
-		Vector3(6, 0, -46),
-		Vector3(-20, 0, -44),
-		Vector3(-40, 0, -30),
-		Vector3(-54, 0, -10),
-		Vector3(-56, 0, 14),
-		Vector3(-42, 0, 34),
-		Vector3(-20, 0, 44),
-		Vector3(6, 0, 44),
-		Vector3(28, 0, 34),
-		Vector3(38, 0, 16),
-		Vector3(32, 0, 0),
-		Vector3(18, 0, CROSS_Z),
-		Vector3(6, 0, CROSS_Z),
-		Vector3(-6, 0, CROSS_Z),
-		Vector3(-18, 0, CROSS_Z),
-		Vector3(-30, 0, CROSS_Z - 2),
-		Vector3(-30, 0, -4),
-		Vector3(-16, 0, 0),
-		Vector3(-4, 0, 4),
-		Vector3(0, 0, 6),
-		Vector3(0, 1.0, 2),
-		Vector3(0, BRIDGE_Y, -4),
-		Vector3(0, BRIDGE_Y, -10),
-		Vector3(0, BRIDGE_Y, 8),
-		Vector3(0, 1.0, 14),
-		Vector3(0, 0, 22),
+		Vector3(0, 0, -38),
+		Vector3(12, 0, -54),
+		Vector3(30, 0, -58),
+		Vector3(48, 0, -48),
+		Vector3(58, 0, -30),
+		Vector3(60, 0, -10),
+		Vector3(54, 0, 12),
+		Vector3(42, 0, 32),
+		Vector3(24, 0, 48),
+		Vector3(2, 0, 56),
+		Vector3(-22, 0, 54),
+		Vector3(-42, 0, 42),
+		Vector3(-56, 0, 24),
+		Vector3(-60, 0, 2),
+		Vector3(-54, 0, -20),
+		Vector3(-40, 0, -38),
+		Vector3(-22, 0, -50),
+		Vector3(-6, 0, -54),
+		Vector3(10, 0, -48),
+		Vector3(24, 0, -36),
+		Vector3(34, 0, -20),
+		Vector3(38, 0, -2),
+		Vector3(32, 0, 16),
+		Vector3(18, 0, 30),
+		Vector3(0, 0, 38),
+		Vector3(-16, 0, 36),
+		Vector3(-30, 0, 26),
+		Vector3(-38, 0, 10),
+		Vector3(-36, 0, -8),
+		Vector3(-24, 0, -24),
+		Vector3(-8, 0, -34),
+		Vector3(0, 0, -38),
 		Vector3(0, 0, 0),
 	]
 
@@ -346,34 +343,7 @@ static func build_nature_circuit(
 		layout.bounds,
 		nature + "ground_grass.fbx"
 	)
-	_place_nature_crossing(track, nature, width)
 	return waypoints[0] + Vector3(0.5, 0.0, -0.5)
-
-
-static func get_nature_finish_pose() -> Dictionary:
-	return {
-		"local_pos": Vector3(0.5, 0.0, -14.0),
-		"travel_dir": Vector3(1.0, 0.0, 0.0),
-	}
-
-
-static func _place_nature_crossing(track: Node3D, nature: String, width: float) -> void:
-	const BRIDGE_Y := 3.6
-	const CROSS_Z := -14.0
-	MeshFactory.add_start_finish_line(
-		track, Vector3(0.5, SLAB_H + 0.03, CROSS_Z), width
-	)
-	for pillar_x in [-5.0, 0.0, 5.0]:
-		var pillar := MeshFactory.create_model(nature + "cliff_block_stone.fbx", "")
-		pillar.position = Vector3(pillar_x, BRIDGE_Y * 0.5, CROSS_Z)
-		pillar.scale = Vector3(1.4, BRIDGE_Y * 0.55, 1.4)
-		track.add_child(pillar)
-	for span_x in range(-6, 7, 3):
-		var span := MeshFactory.create_model(nature + "bridge_stone.fbx", "")
-		span.position = Vector3(float(span_x), BRIDGE_Y - 0.35, -2.0)
-		span.rotation_degrees.y = 90.0
-		span.scale = Vector3(1.2, 1.0, 1.2)
-		track.add_child(span)
 
 
 static func get_nature_layout() -> Dictionary:
