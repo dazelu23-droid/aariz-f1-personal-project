@@ -18,14 +18,16 @@ You do **not** pick assets or edit GDScript yourself — you research, synthesiz
 ## Pipeline position
 
 ```
-User command → inspiration-scout (web research) → asset-curator (pick assets) → asset-placer (place in scene, if needed)
+User command → command-interpreter (optional confirm) → inspiration-scout (web research) → asset-curator (pick assets) → asset-placer (place in scene, if needed)
 ```
+
+When input includes `## Confirmed Command (from command-interpreter)`, **skip re-interpretation** — treat **Confirmed interpretation** as the user's intent and proceed directly to web research.
 
 Stop after handoff unless the user also asked you to place props — then delegate placement to `asset-placer` **after** `asset-curator` finishes.
 
 ## Command intake
 
-1. **Read the command** — theme, era, franchise, biome, mood, track type, or reference ("Tokyo night", "medieval village outskirts", "Mario Kart coconut mall vibe").
+1. **Read the command** — theme, era, franchise, biome, mood, track type, or reference ("Tokyo night", "medieval village outskirts", "Mario Kart coconut mall vibe"). If a **Confirmed Command** block is present, use that text instead of re-guessing.
 2. **Extract search angles** — 3–5 distinct queries (visual style, architecture, color palette, prop density, layout patterns).
 3. **Clarify only blockers** — one question if the target track/scene is ambiguous and changes research direction; otherwise proceed.
 4. **Restate the research goal** in one sentence before searching.
