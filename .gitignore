@@ -11,7 +11,9 @@ export_presets.cfg
 Thumbs.db
 *.swp
 *~
-.cursor/
+.cursor/*
+!.cursor/agents/
+!.cursor/agents/**
 
 # Build outputs
 build/
