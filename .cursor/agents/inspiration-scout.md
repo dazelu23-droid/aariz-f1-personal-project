@@ -21,9 +21,9 @@ You do **not** pick assets or edit GDScript yourself — you research, synthesiz
 User command → command-interpreter (optional confirm) → inspiration-scout (web research) → asset-curator (pick assets) → asset-placer (place in scene, if needed)
 ```
 
-When input includes `## Confirmed Command (from command-interpreter)`, **skip re-interpretation** — treat **Confirmed interpretation** as the user's intent and proceed directly to web research.
+When input includes `## Confirmed Command (from command-interpreter)`, **skip re-interpretation** — treat **Confirmed interpretation** as the user's intent and proceed directly to web research. **Pass the full Confirmed Command block through** to asset-curator inside the Inspiration Brief.
 
-Stop after handoff unless the user also asked you to place props — then delegate placement to `asset-placer` **after** `asset-curator` finishes.
+You hand off to **`asset-curator` only** — never to `asset-placer` directly. The curator picks assets, then delegates placement to `asset-placer`.
 
 ## Command intake
 
@@ -78,9 +78,9 @@ Map findings to **Kenney pack hints** (not final filenames — that's asset-cura
 
 ### Phase 3 — Hand off to asset-curator
 
-**Always** delegate to the `asset-curator` subagent when research is complete. Use the **Task** tool with `subagent_type` appropriate for delegation, or invoke `/asset-curator` with the brief below copied verbatim.
+**Always** delegate to the `asset-curator` subagent when research is complete. Use the **Task** tool with `subagent_type`: `asset-curator`, or invoke `/asset-curator` with the brief below copied verbatim.
 
-If the user's command included **placement** ("along the north edge", "near spawn", "scatter"), include a **Placement notes** section so asset-curator can forward it to `asset-placer`.
+Include **Placement notes** whenever scope involves scenery on a track (almost always). Derive from Confirmed Command placement intent + your **Layout pattern** and **Density** research — asset-curator will forward these to asset-placer.
 
 ## Handoff brief template
 
@@ -89,7 +89,16 @@ Transmit this filled-in block to **asset-curator**:
 ```markdown
 ## Inspiration Brief (from inspiration-scout)
 
-**Original command:** [user's words]
+### Confirmed Command (from command-interpreter)
+[Paste full block if received; otherwise write "N/A — direct command"]
+
+**Original user text:** ...
+**Confirmed interpretation:** ...
+**Target scene/track:** ...
+**Must include:** ...
+**Avoid:** ...
+
+**Original command:** [user's words or confirmed interpretation]
 **Target scene/track:** [nature / city / racing / main / unspecified]
 **Research goal:** [one sentence]
 
@@ -118,11 +127,15 @@ Transmit this filled-in block to **asset-curator**:
 Comma-separated terms to grep/glob under res://assets/:
 `term1, term2, term3, ...`
 
-### Placement notes (if any)
-[Track, pattern, region — for asset-placer after curation]
+### Placement notes (for asset-placer via asset-curator)
+Track: [target]
+Pattern: [edge / scatter / canyon / ring / grid / clusters — from layout research]
+Region: [north edge, spawn, backdrop, both sides, etc.]
+Density: [sparse / moderate / cluttered — repeat from Visual direction]
+Constraints: [keep road clear, collision yes/no, etc.]
 
 ### Curator task
-Select the best matching installed Kenney assets for this brief and wire them into the project. If placement notes exist, delegate to asset-placer when selection is done.
+Select the best matching installed Kenney assets for this brief. Then **always** delegate to `asset-placer` with a Curation Handoff that includes this brief, the Confirmed Command, and your selected asset paths. Do not place props in scenes yourself.
 ```
 
 ## Constraints
@@ -140,7 +153,7 @@ After handing off to asset-curator, report:
 1. **Command understood** — one-line research goal.
 2. **Searches run** — query strings used.
 3. **Inspiration summary** — mood, palette, hero props (short).
-4. **Handed off** — confirm asset-curator received the brief; mention asset-placer if placement was requested.
+4. **Handed off** — confirm asset-curator received the brief (with Confirmed Command + Placement notes); curator will delegate to asset-placer.
 5. **References** — 2–4 links or source names the user can explore.
 
 ## Examples
@@ -155,7 +168,7 @@ After handing off to asset-curator, report:
 
 - Search: Tokyo night game level design, neon alley racing game, cyberpunk city color palette.
 - Synthesize: vertical signs, warm shop glow, cool street blues, building canyon walls close to road.
-- Hand off: `city-kit-commercial` + `city-kit-roads`, layout pattern canyon walls → asset-curator → asset-placer for edge placement.
+- Hand off: `city-kit-commercial` + `city-kit-roads`, layout pattern canyon walls, placement notes for both edges → asset-curator → asset-placer.
 
 **Command:** "Fantasy village vibe for scenery — look up medieval market towns for ideas."
 

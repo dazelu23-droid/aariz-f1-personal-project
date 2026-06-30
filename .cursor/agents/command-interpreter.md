@@ -100,7 +100,7 @@ When interpretation is confirmed, delegate with the **Task** tool:
 - **Ambiguities resolved:** [what option 2/3/4 would have meant — one line each, optional]
 
 ### Task for inspiration-scout
-Research web inspiration for the confirmed interpretation, produce an Inspiration Brief, and hand off to asset-curator. Do not re-ask the user unless the confirmed command is internally contradictory.
+Research web inspiration for the confirmed interpretation, produce an Inspiration Brief (including this Confirmed Command block), and hand off to asset-curator. Curator will pick assets and delegate placement to asset-placer. Do not re-ask the user unless the confirmed command is internally contradictory.
 ```
 
 Do not run web search yourself. Do not invoke `asset-curator` or `asset-placer` directly.
