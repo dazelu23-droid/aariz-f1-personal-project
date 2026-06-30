@@ -14,9 +14,15 @@ const CHECKPOINT_SCENE := preload("res://scenes/checkpoint.tscn")
 @onready var spawn_point: Marker3D = $SpawnPoint
 @onready var race_timer: Node = $RaceTimer
 
+const COUNTDOWN_STEPS: Array[String] = ["3", "2", "1", "GO!"]
+const COUNTDOWN_STEP_SEC := 1.0
+
 var _car: RigidBody3D
 var _respawn_transform: Transform3D
 var _has_respawn_checkpoint := false
+var _countdown_active := false
+var _countdown_index := 0
+var _countdown_step_timer := 0.0
 
 
 func _ready() -> void:
@@ -28,7 +34,55 @@ func _ready() -> void:
 	_setup_finish_line()
 	_spawn_car()
 	_setup_hud()
-	race_timer.arm()
+	_start_race_countdown()
+
+
+func _process(delta: float) -> void:
+	if not _countdown_active:
+		return
+	_countdown_step_timer -= delta
+	if _countdown_step_timer > 0.0:
+		return
+	_countdown_index += 1
+	if _countdown_index >= COUNTDOWN_STEPS.size():
+		_countdown_active = false
+		_set_all_cars_frozen(false)
+		race_timer.arm()
+		return
+	_countdown_step_timer = COUNTDOWN_STEP_SEC
+
+
+func is_race_started() -> bool:
+	return not _countdown_active
+
+
+func get_countdown_text() -> String:
+	if _countdown_active and _countdown_index < COUNTDOWN_STEPS.size():
+		return COUNTDOWN_STEPS[_countdown_index]
+	return ""
+
+
+func _start_race_countdown() -> void:
+	_countdown_active = true
+	_countdown_index = 0
+	_countdown_step_timer = COUNTDOWN_STEP_SEC
+	_set_all_cars_frozen(true)
+
+
+func _set_all_cars_frozen(frozen: bool) -> void:
+	if _car:
+		_car.freeze = frozen
+		if frozen:
+			_car.linear_velocity = Vector3.ZERO
+			_car.angular_velocity = Vector3.ZERO
+	for node in get_tree().get_nodes_in_group("ai_car"):
+		var ai_car := node as RigidBody3D
+		if ai_car == null:
+			continue
+		ai_car.freeze = frozen
+		if frozen:
+			ai_car.linear_velocity = Vector3.ZERO
+			ai_car.angular_velocity = Vector3.ZERO
 
 
 func get_theme() -> String:

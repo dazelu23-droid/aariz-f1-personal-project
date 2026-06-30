@@ -13,16 +13,32 @@ extends CanvasLayer
 @onready var best_label: Label = $Panel/Margin/VBox/Best
 @onready var hint_label: Label = $Panel/Margin/VBox/Hint
 
-var _timer
+var _timer: RaceTimer
+var _countdown_label: Label
 
 
 func _ready() -> void:
 	_apply_title()
 	hint_label.text = "W/S drive · A/D steer · R checkpoint reset · Esc menu"
 	if timer_path != NodePath():
-		_timer = get_node(timer_path)
+		_timer = get_node(timer_path) as RaceTimer
 		if _timer:
 			_timer.lap_completed.connect(_on_lap_completed)
+	_setup_countdown_overlay()
+
+
+func _setup_countdown_overlay() -> void:
+	_countdown_label = Label.new()
+	_countdown_label.name = "Countdown"
+	_countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_countdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_countdown_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_countdown_label.add_theme_font_size_override("font_size", 108)
+	_countdown_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.2))
+	_countdown_label.add_theme_color_override("font_outline_color", Color(0.05, 0.05, 0.08))
+	_countdown_label.add_theme_constant_override("outline_size", 12)
+	_countdown_label.visible = false
+	add_child(_countdown_label)
 
 
 func _apply_title() -> void:
@@ -31,6 +47,16 @@ func _apply_title() -> void:
 
 
 func _process(_delta: float) -> void:
+	var track := get_tree().current_scene
+	if track and track.has_method("get_countdown_text"):
+		var countdown_text: String = track.get_countdown_text()
+		_countdown_label.visible = countdown_text != ""
+		_countdown_label.text = countdown_text
+		if countdown_text != "":
+			hint_label.text = "Get ready..."
+		else:
+			hint_label.text = "W/S drive · A/D steer · R checkpoint reset · Esc menu"
+
 	if _timer == null:
 		return
 	timer_label.text = "Time: %s" % _timer.format_time(_timer.elapsed_time)

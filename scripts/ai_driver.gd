@@ -24,6 +24,9 @@ func setup(car: RacingCar, samples: Array, profile: Dictionary, track_base: Node
 func _physics_process(_delta: float) -> void:
 	if _car == null or _samples.size() < 2 or _track_base == null:
 		return
+	if _track_base.has_method("is_race_started") and not _track_base.is_race_started():
+		_car.set_ai_input(0.0, 0.0)
+		return
 
 	var local_pos: Vector3 = _track_base.global_to_track_local(_car.global_position)
 	_advance_target(local_pos)

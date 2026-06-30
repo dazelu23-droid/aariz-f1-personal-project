@@ -73,6 +73,11 @@ func _get_road_surface_height() -> float:
 
 
 func _physics_process(delta: float) -> void:
+	if freeze:
+		linear_velocity = Vector3.ZERO
+		angular_velocity = Vector3.ZERO
+		return
+
 	var throttle := 0.0
 	var steer := 0.0
 	if is_ai:
