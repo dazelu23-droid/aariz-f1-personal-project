@@ -89,10 +89,12 @@ func _setup_finish_line() -> void:
 	var finish := FINISH_LINE_SCENE.instantiate() as Area3D
 	finish.timer_path = race_timer.get_path()
 	var s := get_world_scale()
+	var layout := get_path_layout()
+	var road_width: float = layout.get("width", 5.5)
 	finish.position = spawn_point.position
 	finish.rotation = spawn_point.rotation
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(2.2 * s, 1.6, 1.2 * s)
+	shape.size = Vector3(road_width * s * 1.15, 2.5, 4.0 * s)
 	var col := CollisionShape3D.new()
 	col.shape = shape
 	finish.add_child(col)
@@ -103,6 +105,7 @@ func _spawn_car() -> void:
 	_car = CAR_SCENE.instantiate()
 	_car.collision_layer = 2
 	_car.collision_mask = 0
+	_car.add_to_group("player_car")
 	add_child(_car)
 	_car.global_transform = spawn_point.global_transform
 

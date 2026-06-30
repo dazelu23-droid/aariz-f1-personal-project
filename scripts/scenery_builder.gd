@@ -10,8 +10,6 @@ static func populate_racing(props: Node3D, kit: String) -> void:
 	_place_start_line(props, kit)
 	_place_pit_complex(props, kit, layout)
 	_place_grandstands(props, kit, layout)
-	_place_corners(props, kit, layout)
-	_place_back_straight(props, kit, layout)
 
 
 static func _place_racing_backdrop(props: Node3D, kit: String, road: Dictionary) -> void:
@@ -255,71 +253,71 @@ static func _place_pit_complex(props: Node3D, kit: String, layout: Dictionary) -
 
 
 static func _place_grandstands(props: Node3D, kit: String, layout: Dictionary) -> void:
+	var samples: Array = layout.get("samples", [])
+	if samples.size() < 2:
+		return
+
+	var road_width: float = layout.get("width", 5.5)
 	var models := ["grandStand.glb", "grandStandCovered.glb", "grandStandRound.glb"]
-	var road: Dictionary = layout["bounds"]
+	var side_offset := road_width * 0.5 + 8.0
+	var far_offset := road_width * 0.5 + 12.0
 	var idx := 0
 
-	# Main straight — east side overlooking start/finish and pit lane.
-	var z := -2.0
-	while z >= -72.0:
-		_place(props, kit, models[idx % 3], Vector3(9.0, 0, z), -90.0)
-		if idx % 2 == 0:
-			_place(props, kit, "grandStandCovered.glb", Vector3(13.5, 0, z), -90.0)
-		z -= 1.5
-		idx += 1
+	for i in range(0, samples.size() - 1, 2):
+		var a: Vector3 = samples[i]
+		var b: Vector3 = samples[i + 1]
+		if a.distance_squared_to(b) < 0.02:
+			continue
+		var dir := (b - a).normalized()
+		var perp := Vector3(-dir.z, 0.0, dir.x)
+		var p := a.lerp(b, 0.5)
+		var face := rad_to_deg(atan2(dir.x, dir.z))
 
-	# Main straight — west side.
-	z = -2.0
-	idx = 0
-	while z >= -72.0:
-		_place(props, kit, models[(idx + 1) % 3], Vector3(-10.0, 0, z), 90.0)
+		var left := p + perp * side_offset
+		var right := p - perp * side_offset
+		if not _near_path(left, samples, road_width * 0.5 + 5.0):
+			_place(props, kit, models[idx % 3], left, face + 90.0)
+		if not _near_path(right, samples, road_width * 0.5 + 5.0):
+			_place(props, kit, models[(idx + 1) % 3], right, face - 90.0)
+
 		if idx % 3 == 0:
-			_place(props, kit, "grandStandRound.glb", Vector3(-14.0, 0, z), 90.0)
-		z -= 1.7
+			var far_left := p + perp * far_offset
+			var far_right := p - perp * far_offset
+			if not _near_path(far_left, samples, road_width * 0.5 + 6.5):
+				_place(props, kit, "grandStandCovered.glb", far_left, face + 90.0)
+			if not _near_path(far_right, samples, road_width * 0.5 + 6.5):
+				_place(props, kit, "grandStandRound.glb", far_right, face - 90.0)
+
 		idx += 1
 
-	_place(props, kit, "grandStandCoveredRound.glb", Vector3(11.0, 0, -5.0), -90.0)
-	_place(props, kit, "grandStandCoveredRound.glb", Vector3(11.0, 0, -22.0), -90.0)
-	_place(props, kit, "grandStandCoveredRound.glb", Vector3(11.0, 0, -42.0), -90.0)
-	_place(props, kit, "grandStandCoveredRound.glb", Vector3(-12.0, 0, -30.0), 90.0)
-
-	# Back straight — north side facing the track.
-	var back_z: float = road.min_z + 1.5
-	var x: float = road.min_x + 10.0
-	while x <= road.max_x - 10.0:
-		var model: String = "grandStandRound.glb" if idx % 4 == 0 else models[idx % 3]
-		_place(props, kit, model, Vector3(x, 0, back_z), 0.0)
-		if idx % 2 == 0:
-			_place(props, kit, "grandStandCovered.glb", Vector3(x, 0, back_z - 5.5), 0.0)
-		x += 2.2
-		idx += 1
-
-	# South straight — grandstands along the home straight return.
-	var south_z: float = road.max_z - 1.5
-	x = road.min_x + 10.0
-	while x <= road.max_x - 10.0:
-		_place(props, kit, models[idx % 3], Vector3(x, 0, south_z), 180.0)
-		if idx % 2 == 1:
-			_place(props, kit, "grandStandCovered.glb", Vector3(x, 0, south_z + 5.5), 180.0)
-		x += 2.4
-		idx += 1
-
-	_place_grandstand_horizon(props, kit, road)
+	_place_grandstand_horizon(props, kit, layout)
 
 
-static func _place_grandstand_horizon(props: Node3D, kit: String, road: Dictionary) -> void:
+static func _place_grandstand_horizon(props: Node3D, kit: String, layout: Dictionary) -> void:
+	var road: Dictionary = layout["bounds"]
+	var samples: Array = layout.get("samples", [])
+	var road_width: float = layout.get("width", 5.5)
 	var models := ["grandStand.glb", "grandStandCovered.glb", "grandStandRound.glb", "grandStandCoveredRound.glb"]
+	var clearance := road_width * 0.5 + 10.0
 	var idx := 0
-	var outer := 20.0
+	var outer := 22.0
 
-	for x in range(int(road.min_x) - 6, int(road.max_x) + 8, 3):
-		_place(props, kit, models[idx % models.size()], Vector3(x, 0, road.min_z - outer), 0.0)
-		_place(props, kit, models[(idx + 2) % models.size()], Vector3(x, 0, road.max_z + outer), 180.0)
+	for x in range(int(road.min_x) - 6, int(road.max_x) + 8, 4):
+		var north := Vector3(x, 0, road.min_z - outer)
+		var south := Vector3(x, 0, road.max_z + outer)
+		if not _near_path(north, samples, clearance):
+			_place(props, kit, models[idx % models.size()], north, 0.0)
+		if not _near_path(south, samples, clearance):
+			_place(props, kit, models[(idx + 2) % models.size()], south, 180.0)
 		idx += 1
 
-	for z in range(int(road.min_z) - 6, int(road.max_z) + 8, 3):
-		_place(props, kit, models[idx % models.size()], Vector3(road.max_x + outer, 0, z), -90.0)
-		_place(props, kit, models[(idx + 1) % models.size()], Vector3(road.min_x - outer, 0, z), 90.0)
+	for z in range(int(road.min_z) - 6, int(road.max_z) + 8, 4):
+		var east := Vector3(road.max_x + outer, 0, z)
+		var west := Vector3(road.min_x - outer, 0, z)
+		if not _near_path(east, samples, clearance):
+			_place(props, kit, models[idx % models.size()], east, -90.0)
+		if not _near_path(west, samples, clearance):
+			_place(props, kit, models[(idx + 1) % models.size()], west, 90.0)
 		idx += 1
 
 
