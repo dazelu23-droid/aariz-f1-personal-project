@@ -14,6 +14,8 @@ Thumbs.db
 .cursor/*
 !.cursor/agents/
 !.cursor/agents/**
+!.cursor/rules/
+!.cursor/rules/**
 
 # Build outputs
 build/

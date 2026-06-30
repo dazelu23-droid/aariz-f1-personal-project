@@ -1,0 +1,30 @@
+---
+description: Enable and delegate to all project subagents proactively
+alwaysApply: true
+---
+
+# Subagents enabled
+
+All custom subagents in `.cursor/agents/` are **enabled**. Delegate with the Task tool using `subagent_type` or invoke with `/name`.
+
+## Creative pipeline (use in order when building scenery)
+
+1. **command-interpreter** — clarify vague commands (10-pass review + 4 options)
+2. **inspiration-scout** — web research and mood/direction brief
+3. **asset-curator** — pick Kenney assets from `res://assets/`
+4. **asset-placer** — place props in Godot scenes
+
+## Game and visuals
+
+5. **game-rebuilder** — rebuild gameplay, tracks, cars, UI, physics from user commands
+6. **graphics-improver** — lighting, materials, post-processing, visual polish
+
+## User-level (also available)
+
+7. **skill-synthesizer** — create Agent Skills when repeated workflows appear
+
+## Built-in subagents (also enabled)
+
+Use Task tool `subagent_type` when appropriate: `explore`, `shell`, `generalPurpose`, `cursor-guide`, `ci-investigator`, `bugbot`, `security-review`, `best-of-n-runner`.
+
+Prefer project subagents for Godot/asset work; use built-in types for codebase search, terminal, or review tasks.
