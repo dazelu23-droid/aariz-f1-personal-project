@@ -3,14 +3,15 @@ extends RefCounted
 
 
 static func populate_racing(props: Node3D, kit: String) -> void:
-	var road: Dictionary = RoadBuilder.get_racing_layout()["bounds"]
-	_fill_grid(props, kit + "grass.glb", road.min_x - 22, road.max_x + 22, road.min_z - 22, road.max_z + 22, 1.2, road)
+	var layout := RoadBuilder.get_racing_layout()
+	var road: Dictionary = layout["bounds"]
+	_fill_grid(props, kit + "grass.glb", road.min_x - 30, road.max_x + 30, road.min_z - 30, road.max_z + 30, 1.2, road)
 	_place_racing_backdrop(props, kit, road)
-	_place_start_line(props, kit, road)
-	_place_pit_complex(props, kit, road)
-	_place_grandstands(props, kit, road)
-	_place_corners(props, kit, road)
-	_place_back_straight(props, kit, road)
+	_place_start_line(props, kit)
+	_place_pit_complex(props, kit, layout)
+	_place_grandstands(props, kit, layout)
+	_place_corners(props, kit, layout)
+	_place_back_straight(props, kit, layout)
 
 
 static func _place_racing_backdrop(props: Node3D, kit: String, road: Dictionary) -> void:
@@ -230,48 +231,81 @@ static func _scatter_nature_props(
 		placed += 1
 
 
-static func _place_start_line(props: Node3D, kit: String, road: Dictionary) -> void:
-	_place_if_clear(props, kit, "flagCheckers.glb", Vector3(-1.2, 0, -2.5), 90.0, road)
-	_place_if_clear(props, kit, "flagGreen.glb", Vector3(-1.2, 0, -3.5), 90.0, road)
-	_place_if_clear(props, kit, "lightColored.glb", Vector3(-1.2, 0, -6.0), 90.0, road)
+static func _place_start_line(props: Node3D, kit: String) -> void:
+	_place(props, kit, "flagCheckers.glb", Vector3(-4.5, 0, -2.5), 90.0)
+	_place(props, kit, "flagGreen.glb", Vector3(-4.5, 0, -4.0), 90.0)
+	_place(props, kit, "lightColored.glb", Vector3(-4.5, 0, -6.5), 90.0)
+	_place(props, kit, "lightRed.glb", Vector3(4.5, 0, -2.5), -90.0)
 
 
-static func _place_pit_complex(props: Node3D, kit: String, road: Dictionary) -> void:
+static func _place_pit_complex(props: Node3D, kit: String, layout: Dictionary) -> void:
 	var garages := ["pitsGarage.glb", "pitsGarage.glb", "pitsGarageClosed.glb", "pitsOffice.glb"]
-	for i in range(5):
-		var z := -i * 2.0
-		_place_if_clear(props, kit, garages[i % garages.size()], Vector3(-2.8, 0, z), 90.0, road)
-
-
-static func _place_grandstands(props: Node3D, kit: String, road: Dictionary) -> void:
-	var models := ["grandStand.glb", "grandStandCovered.glb", "grandStandRound.glb"]
-	var z_pos := -2.0
+	var pit_x := -8.0
+	var z := -3.0
 	var idx := 0
-	while z_pos >= road.min_z + 2.0:
-		_place_if_clear(props, kit, models[idx % 3], Vector3(road.max_x - 2.0, 0, z_pos), -90.0, road, 2.5)
-		_place_if_clear(props, kit, models[(idx + 1) % 3], Vector3(road.min_x - 1.5, 0, z_pos), 90.0, road, 2.5)
-		z_pos -= 2.0
+	while z >= -70.0:
+		_place(props, kit, garages[idx % garages.size()], Vector3(pit_x, 0, z), 90.0)
+		if idx % 3 == 0:
+			_place(props, kit, "fenceStraight.glb", Vector3(-4.8, 0, z), 90.0)
+		if idx % 4 == 1:
+			_place(props, kit, "barrierRed.glb", Vector3(-5.8, 0, z + 0.6), 90.0)
+		z -= 2.6
 		idx += 1
-	for z_off in [road.min_z + 4.0, road.min_z + 2.0, road.min_z]:
-		if z_off > road.min_z - 6.0:
-			_place_if_clear(props, kit, "grandStandCoveredRound.glb", Vector3(road.max_x - 1.0, 0, z_off), -90.0, road, 2.5)
+	_place(props, kit, "pitsOffice.glb", Vector3(pit_x, 0, -1.5), 90.0)
+	_place(props, kit, "flagBlue.glb", Vector3(-5.5, 0, -1.0), 90.0)
+	_place(props, kit, "roadStart.glb", Vector3(-6.5, 0, -8.0), 90.0)
 
 
-static func _place_corners(props: Node3D, kit: String, road: Dictionary) -> void:
+static func _place_grandstands(props: Node3D, kit: String, layout: Dictionary) -> void:
+	var models := ["grandStand.glb", "grandStandCovered.glb", "grandStandRound.glb"]
+	var road: Dictionary = layout["bounds"]
+	var idx := 0
+
+	# Main straight — east side overlooking start/finish and pit lane.
+	var z := -3.0
+	while z >= -70.0:
+		_place(props, kit, models[idx % 3], Vector3(9.0, 0, z), -90.0)
+		z -= 2.4
+		idx += 1
+	_place(props, kit, "grandStandCoveredRound.glb", Vector3(11.0, 0, -5.0), -90.0)
+	_place(props, kit, "grandStandCoveredRound.glb", Vector3(11.0, 0, -22.0), -90.0)
+
+	# Back straight — north side facing the track.
+	var back_z := road.min_z + 2.0
+	var x := road.min_x + 18.0
+	while x <= road.max_x - 18.0:
+		var model: String = "grandStandRound.glb" if idx % 5 == 0 else models[idx % 3]
+		_place(props, kit, model, Vector3(x, 0, back_z), 0.0)
+		x += 3.2
+		idx += 1
+
+	# South straight — grandstands along the home straight return.
+	var south_z := road.max_z - 2.0
+	x = road.min_x + 14.0
+	while x <= road.max_x - 14.0:
+		_place(props, kit, models[idx % 3], Vector3(x, 0, south_z), 180.0)
+		x += 3.5
+		idx += 1
+
+
+static func _place_corners(props: Node3D, kit: String, layout: Dictionary) -> void:
+	var road: Dictionary = layout["bounds"]
 	var corners := [
-		{"file": "roadCornerLargeSand.glb", "pos": Vector3(road.min_x, 0, road.min_z + 2.0), "rot": 0.0},
-		{"file": "roadCornerLargeWall.glb", "pos": Vector3(road.max_x - 2.0, 0, road.min_z), "rot": -90.0},
-		{"file": "roadCornerLargeSand.glb", "pos": Vector3(road.max_x - 1.0, 0, road.max_z - 1.0), "rot": 180.0},
+		{"file": "roadCornerLargeSand.glb", "pos": Vector3(road.min_x + 2.0, 0, road.min_z + 2.0), "rot": 0.0},
+		{"file": "roadCornerLargeWall.glb", "pos": Vector3(road.max_x - 2.0, 0, road.min_z + 2.0), "rot": -90.0},
+		{"file": "roadCornerLargeSand.glb", "pos": Vector3(road.max_x - 2.0, 0, road.max_z - 2.0), "rot": 180.0},
+		{"file": "roadCornerLargeWall.glb", "pos": Vector3(road.min_x + 2.0, 0, road.max_z - 2.0), "rot": 90.0},
 	]
 	for c in corners:
-		_place_if_clear(props, kit, c.file, c.pos, c.rot, road, 2.0)
+		_place(props, kit, c.file, c.pos, c.rot)
 
 
-static func _place_back_straight(props: Node3D, kit: String, road: Dictionary) -> void:
-	var z := -2.0
-	while z >= road.min_z + 4.0:
-		_place_if_clear(props, kit, "billboard.glb", Vector3(road.max_x - 0.5, 0, z), -90.0, road, 2.5)
-		z -= 4.0
+static func _place_back_straight(props: Node3D, kit: String, layout: Dictionary) -> void:
+	var road: Dictionary = layout["bounds"]
+	var x := road.min_x + 12.0
+	while x <= road.max_x - 12.0:
+		_place(props, kit, "billboard.glb", Vector3(x, 0, road.min_z - 6.0), 0.0)
+		x += 8.0
 
 
 static func _place_if_clear(

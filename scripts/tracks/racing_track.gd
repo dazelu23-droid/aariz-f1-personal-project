@@ -22,7 +22,9 @@ func get_world_scale() -> float:
 
 
 func get_track_center_offset() -> Vector3:
-	return Vector3(-8.0, 0.0, 10.0)
+	var layout: Dictionary = _RoadBuilder.get_racing_layout()
+	var bounds: Dictionary = layout.bounds
+	return Vector3(-(bounds.min_x + bounds.max_x) * 0.5, 0.0, -(bounds.min_z + bounds.max_z) * 0.5)
 
 
 func get_ground_color() -> Color:
@@ -30,7 +32,9 @@ func get_ground_color() -> Color:
 
 
 func get_ground_size() -> float:
-	return 300.0
+	var layout: Dictionary = _RoadBuilder.get_racing_layout()
+	var bounds: Dictionary = layout.bounds
+	return maxf(bounds.max_x - bounds.min_x, bounds.max_z - bounds.min_z) + 200.0
 
 
 func get_horizon_color() -> Color:
@@ -39,6 +43,7 @@ func get_horizon_color() -> Color:
 
 func _add_track_ground() -> void:
 	MeshFactory.add_ground(self, get_ground_color(), get_ground_size())
+	MeshFactory.add_horizon_skirt(self, get_horizon_color(), get_ground_size() * 1.35)
 
 
 func _build_track() -> void:

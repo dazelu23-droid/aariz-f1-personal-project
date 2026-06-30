@@ -29,65 +29,48 @@ static func build_racing_circuit(
 	var tile := 2.0
 	_begin_road_build(tile)
 	var width := 3.0
-	var north := 10
-	var east := 8
-	var south := 10
-	var west := 10
-	var road: Dictionary = get_racing_layout()["bounds"]
-
-	MeshFactory.add_start_finish_line(track, Vector3(0.5, SLAB_H + 0.02, -2.2), width)
-	_place_decal(track, kit, "roadStraightArrow.glb", Vector3(0, 0, -2), 0.0)
-
-	for i in range(1, north):
-		_tile(track, border, Vector3(0, 0, -i * tile), 0.0, false, tile, width, true, MeshFactory.ASPHALT)
-	_tile(track, border, Vector3(0, 0, -north * tile + tile), 0.0, true, tile, width, true, MeshFactory.ASPHALT)
-	for i in range(east - 1):
-		_tile(track, border, Vector3(2.0 + i * tile, 0, -north * tile), -90.0, false, tile, width, true, MeshFactory.ASPHALT)
-	_tile(track, border, Vector3(2.0 + (east - 1) * tile, 0, -north * tile), -90.0, true, tile, width, true, MeshFactory.ASPHALT)
-	var east_x := 2.0 + (east - 1) * tile
-	for i in range(south - 1):
-		_tile(track, border, Vector3(east_x, 0, -north * tile + tile + i * tile), 180.0, false, tile, width, true, MeshFactory.ASPHALT)
-	_tile(track, border, Vector3(east_x, 0, -north * tile + south * tile), 180.0, true, tile, width, true, MeshFactory.ASPHALT)
-	for i in range(west - 1):
-		_tile(track, border, Vector3(east_x - tile - i * tile, 0, -north * tile + south * tile + tile), 90.0, false, tile, width, true, MeshFactory.ASPHALT)
-	_tile(track, border, Vector3(0, 0, -north * tile + south * tile + tile), 90.0, true, tile, width, true, MeshFactory.ASPHALT)
-
-	_finish_road_collision(track)
-	var layout: Dictionary = _preview_waypoint_layout(_racing_waypoints(tile, north, east, south, west), tile * 0.5)
+	var waypoints: Array = _chamfer_waypoints(_racing_circuit_waypoints(), 5.0)
+	var layout: Dictionary = _build_waypoint_circuit(
+		track, border, waypoints, tile, width, true, MeshFactory.ASPHALT, kit
+	)
+	MeshFactory.add_start_finish_line(
+		track, waypoints[0] + Vector3(0.5, SLAB_H + 0.02, -1.6), width
+	)
 	_place_path_guides(track, layout, kit)
-	_fill_ground_excluding(fill, road.min_x - 28, road.max_x + 28, road.min_z - 28, road.max_z + 28, 1.0, road, kit + "grass.glb")
-	return Vector3(0.5, 0.0, -3.0)
+	_place_visual_barriers(border, layout, width, kit, 0.35)
+	var road: Dictionary = layout["bounds"]
+	_fill_ground_excluding(
+		fill,
+		road.min_x - 40,
+		road.max_x + 40,
+		road.min_z - 40,
+		road.max_z + 40,
+		1.0,
+		road,
+		kit + "grass.glb"
+	)
+	return waypoints[0] + Vector3(0.5, 0.0, -2.0)
 
 
-static func _racing_waypoints(tile: float, north: int, east: int, south: int, west: int) -> Array:
-	var north_end := -north * tile
-	var east_x := 2.0 + (east - 1) * tile
-	var south_end := -north * tile + south * tile + tile
+static func _racing_circuit_waypoints() -> Array:
+	# ~560 local units — about a 60 s lap at world scale 5 with average race speed.
 	return [
-		Vector3(0.5, 0, -1.0),
-		Vector3(0.5, 0, north_end + 0.5),
-		Vector3(east_x + 0.5, 0, north_end + 0.5),
-		Vector3(east_x + 0.5, 0, south_end + 0.5),
-		Vector3(0.5, 0, south_end + 0.5),
-		Vector3(0.5, 0, -1.0),
+		Vector3(0, 0, 0),
+		Vector3(0, 0, -72),
+		Vector3(140, 0, -72),
+		Vector3(140, 0, 72),
+		Vector3(0, 0, 72),
+		Vector3(0, 0, 0),
 	]
 
 
 static func get_racing_layout() -> Dictionary:
 	var tile := 2.0
-	var north := 10
-	var east := 8
-	var south := 10
-	var west := 10
-	var layout := _preview_waypoint_layout(
-		_racing_waypoints(tile, north, east, south, west), tile * 0.5
-	)
+	var waypoints: Array = _chamfer_waypoints(_racing_circuit_waypoints(), 5.0)
+	var layout := _preview_waypoint_layout(waypoints, tile * 0.5)
 	layout["tile"] = tile
-	layout["north"] = north
-	layout["east"] = east
-	layout["south"] = south
-	layout["west"] = west
 	layout["width"] = 3.0
+	layout["waypoints"] = waypoints
 	return layout
 
 
