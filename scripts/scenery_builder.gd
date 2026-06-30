@@ -336,12 +336,13 @@ static func _place_nature_mountain_border(
 			Vector3.ONE * rng.randf_range(2.4, 3.4)
 		)
 
-	for ring in [margin, inner_margin]:
-		var ring_min_x := road.min_x - ring
-		var ring_max_x := road.max_x + ring
-		var ring_min_z := road.min_z - ring
-		var ring_max_z := road.max_z + ring
-		var x := ring_min_x + step * 0.5
+	var rings: Array[float] = [margin, inner_margin]
+	for ring in rings:
+		var ring_min_x: float = road.min_x - ring
+		var ring_max_x: float = road.max_x + ring
+		var ring_min_z: float = road.min_z - ring
+		var ring_max_z: float = road.max_z + ring
+		var x: float = ring_min_x + step * 0.5
 		while x <= ring_max_x:
 			for z_side in [ring_min_z, ring_max_z]:
 				var pos_n: Vector3 = Vector3(x, 0.0, z_side)
@@ -353,7 +354,7 @@ static func _place_nature_mountain_border(
 					)
 			x += step
 
-		var z := ring_min_z + step * 0.5
+		var z: float = ring_min_z + step * 0.5
 		while z <= ring_max_z:
 			for x_side in [ring_min_x, ring_max_x]:
 				var pos_e: Vector3 = Vector3(x_side, 0.0, z)
