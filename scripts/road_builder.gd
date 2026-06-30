@@ -202,7 +202,6 @@ static func _build_waypoint_circuit(
 	var layout := _layout_from_samples(samples, tile)
 	if kit != "":
 		_finish_kit_road_visuals(track, kit)
-	_finish_road_collision(track)
 	return layout
 
 
@@ -375,7 +374,6 @@ static func _tile(
 		MeshFactory.add_surface_slab(
 			track, spec.center, spec.size, rotation_y_deg, surface_color, false
 		)
-	_stamp_spec_to_collision_grid(spec, rotation_y_deg)
 	if not covered:
 		_register_road_aabb(spec, rotation_y_deg)
 	if f1_curbs and kit == "":

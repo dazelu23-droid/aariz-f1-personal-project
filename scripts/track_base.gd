@@ -102,7 +102,7 @@ func _setup_finish_line() -> void:
 func _spawn_car() -> void:
 	_car = CAR_SCENE.instantiate()
 	_car.collision_layer = 2
-	_car.collision_mask = 1
+	_car.collision_mask = 0
 	add_child(_car)
 	_car.global_transform = spawn_point.global_transform
 
@@ -124,6 +124,12 @@ func get_track_name() -> String:
 
 func get_path_layout() -> Dictionary:
 	return {}
+
+
+func get_road_surface_height() -> float:
+	const ROAD_TOP_LOCAL := 0.14
+	const CAR_RIDE_HEIGHT := 0.05
+	return ROAD_TOP_LOCAL * get_world_scale() + CAR_RIDE_HEIGHT
 
 
 func register_checkpoint(checkpoint_transform: Transform3D) -> void:

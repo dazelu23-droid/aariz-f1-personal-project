@@ -26,6 +26,32 @@ func _ready() -> void:
 	physics_material_override = road_grip
 
 
+func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
+	var road_y := _get_road_surface_height()
+	var origin := state.transform.origin
+	origin.y = road_y
+	state.transform.origin = origin
+
+	var euler := state.transform.basis.get_euler(EULER_ORDER_YXZ)
+	state.transform.basis = Basis.from_euler(Vector3(0.0, euler.y, 0.0))
+
+	var linear := state.linear_velocity
+	linear.y = 0.0
+	state.linear_velocity = linear
+
+	var angular := state.angular_velocity
+	angular.x = 0.0
+	angular.z = 0.0
+	state.angular_velocity = angular
+
+
+func _get_road_surface_height() -> float:
+	var track := get_tree().current_scene
+	if track and track.has_method("get_road_surface_height"):
+		return track.get_road_surface_height()
+	return global_position.y
+
+
 func _physics_process(delta: float) -> void:
 	var throttle := Input.get_action_strength("accelerate") - Input.get_action_strength("brake")
 	var steer := Input.get_action_strength("steer_left") - Input.get_action_strength("steer_right")
