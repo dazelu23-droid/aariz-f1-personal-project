@@ -34,15 +34,16 @@ func get_ground_color() -> Color:
 func get_ground_size() -> float:
 	var layout: Dictionary = _RoadBuilder.get_nature_layout()
 	var bounds: Dictionary = layout.bounds
-	return maxf(bounds.max_x - bounds.min_x, bounds.max_z - bounds.min_z) + 220.0
+	var span: float = maxf(bounds.max_x - bounds.min_x, bounds.max_z - bounds.min_z)
+	return span * get_world_scale() + 280.0
 
 
-func get_horizon_color() -> Color:
-	return Color(0.16, 0.34, 0.18)
+func _add_track_ground() -> void:
+	var size := get_ground_size()
+	MeshFactory.add_ground(self, get_ground_color(), size)
 
 
 func _build_track() -> void:
-	_add_track_ground()
 	var spawn_local: Vector3 = _RoadBuilder.build_nature_circuit(
 		track_root, border_root, fill_root, NATURE
 	)

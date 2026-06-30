@@ -178,6 +178,74 @@ static func populate_nature(props: Node3D, nature: String) -> void:
 	)
 	_place_nature_lake(props, nature, samples, road_width)
 	_scatter_nature_props(props, nature, road, samples, road_width)
+	_place_nature_mountain_border(props, nature, road, samples, road_width)
+
+
+static func _place_nature_mountain_border(
+	props: Node3D,
+	nature: String,
+	road: Dictionary,
+	samples: Array,
+	road_width: float
+) -> void:
+	var wall_models: Array[String] = [
+		"cliff_large_stone.fbx", "cliff_large_rock.fbx", "cliff_stone.fbx",
+		"cliff_block_stone.fbx", "cliff_rock.fbx", "cliff_top_stone.fbx",
+		"cliff_block_rock.fbx", "cliff_half_stone.fbx", "cliff_diagonal_stone.fbx",
+	]
+	var corner_models: Array[String] = [
+		"cliff_cornerLarge_stone.fbx", "cliff_cornerLarge_rock.fbx",
+		"cliff_corner_stone.fbx", "cliff_corner_rock.fbx",
+	]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77531
+	var margin := 48.0
+	var step := 6.5
+	var path_clear := road_width * 0.5 + 7.0
+
+	var min_x: float = road.min_x - margin
+	var max_x: float = road.max_x + margin
+	var min_z: float = road.min_z - margin
+	var max_z: float = road.max_z + margin
+
+	var corners: Array[Vector3] = [
+		Vector3(min_x, 0.0, min_z), Vector3(max_x, 0.0, min_z),
+		Vector3(max_x, 0.0, max_z), Vector3(min_x, 0.0, max_z),
+	]
+	var corner_rots: Array[float] = [0.0, -90.0, 180.0, 90.0]
+	for i in range(corners.size()):
+		var pos: Vector3 = corners[i]
+		if _near_path(pos, samples, path_clear):
+			continue
+		var corner_model: String = corner_models[i % corner_models.size()]
+		_place(
+			props, nature, corner_model, pos, corner_rots[i],
+			Vector3.ONE * rng.randf_range(1.35, 1.75)
+		)
+
+	var x := min_x + step * 0.5
+	while x <= max_x:
+		for z_side in [min_z, max_z]:
+			var pos_n: Vector3 = Vector3(x, 0.0, z_side)
+			if not _near_path(pos_n, samples, path_clear):
+				var wall_model: String = wall_models[rng.randi_range(0, wall_models.size() - 1)]
+				_place(
+					props, nature, wall_model, pos_n, rng.randf_range(0.0, 360.0),
+					Vector3.ONE * rng.randf_range(1.25, 1.7)
+				)
+		x += step
+
+	var z := min_z + step * 0.5
+	while z <= max_z:
+		for x_side in [min_x, max_x]:
+			var pos_e: Vector3 = Vector3(x_side, 0.0, z)
+			if not _near_path(pos_e, samples, path_clear):
+				var wall_model_e: String = wall_models[rng.randi_range(0, wall_models.size() - 1)]
+				_place(
+					props, nature, wall_model_e, pos_e, rng.randf_range(0.0, 360.0),
+					Vector3.ONE * rng.randf_range(1.25, 1.7)
+				)
+		z += step
 
 
 static func _place_nature_lake(
