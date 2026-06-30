@@ -37,7 +37,7 @@ static func build_racing_circuit(
 		track, waypoints[0] + Vector3(0.5, SLAB_H + 0.02, -1.6), width
 	)
 	_place_path_guides(track, layout, kit)
-	_place_visual_barriers(border, layout, width, kit, 0.35)
+	_place_visual_barriers(border, layout, width, kit, 0.65)
 	var road: Dictionary = layout["bounds"]
 	_fill_ground_excluding(
 		fill,
@@ -163,9 +163,7 @@ static func _build_waypoint_circuit(
 		return _layout_from_samples(samples, tile)
 
 	samples.append(waypoints[0])
-	if kit != "":
-		_place_kit_road(track, kit, "roadStart.glb", waypoints[0], 0.0, false)
-		_place_kit_road(track, kit, "roadStraightArrow.glb", waypoints[0] + Vector3(0, 0, -tile), 0.0, false)
+	var start_anchor: Vector3 = waypoints[0]
 
 	for seg_idx in range(waypoints.size() - 1):
 		var a: Vector3 = waypoints[seg_idx]
@@ -189,7 +187,7 @@ static func _build_waypoint_circuit(
 			var anchor := a + dir * (seg_len * t0)
 			var center := a.lerp(b, (t0 + t1) * 0.5)
 			var is_corner := step == steps - 1 and rot != next_rot
-			_tile(track, border, anchor, rot, is_corner, tile, width, use_curbs, surface)
+			_tile(track, border, anchor, rot, is_corner, tile, width, use_curbs, surface, kit, start_anchor)
 			samples.append(center)
 		samples.append(b)
 
@@ -216,15 +214,14 @@ static func _place_path_guides(
 		var dir := (b - a).normalized()
 		var rot := _direction_to_rot(dir)
 		var p := a.lerp(b, 0.5)
-		MeshFactory.add_visual_marker(
-			track,
-			p + Vector3(0.0, SLAB_H + 0.018, 0.0),
-			Vector3(0.12, 0.02, 0.55),
-			rot,
-			line_color
-		)
-		if kit != "" and marker_idx % 3 == 0:
-			_place_decal(track, kit, "roadStraightArrow.glb", p, rot)
+		if kit == "":
+			MeshFactory.add_visual_marker(
+				track,
+				p + Vector3(0.0, SLAB_H + 0.018, 0.0),
+				Vector3(0.12, 0.02, 0.55),
+				rot,
+				line_color
+			)
 		marker_idx += 1
 
 
@@ -258,9 +255,6 @@ static func _place_visual_barriers(
 			MeshFactory.add_visual_marker(
 				border, right + Vector3(0.0, 0.07, 0.0), Vector3(0.28, 0.14, 0.85), rot, marker
 			)
-		elif i % 2 == 0:
-			_place_kit_road(border, kit, "barrierRed.glb", left, rot, false)
-			_place_kit_road(border, kit, "barrierWhite.glb", right, rot, false)
 		else:
 			_place_kit_road(border, kit, "fenceStraight.glb", left, rot, false)
 			_place_kit_road(border, kit, "fenceStraight.glb", right, rot, false)
@@ -388,17 +382,26 @@ static func _tile(
 	tile: float,
 	width: float,
 	f1_curbs: bool,
-	surface_color: Color = MeshFactory.ASPHALT
+	surface_color: Color = MeshFactory.ASPHALT,
+	kit: String = "",
+	start_anchor: Vector3 = Vector3.ZERO
 ) -> void:
 	var spec := _slab_spec(anchor, rotation_y_deg, is_corner, tile, width)
 	var covered := _road_already_covered(spec, rotation_y_deg)
-	MeshFactory.add_surface_slab(
-		track, spec.center, spec.size, rotation_y_deg, surface_color, false
-	)
+	if kit != "":
+		if not covered:
+			var piece := "roadCornerSmall.glb" if is_corner else "roadStraight.glb"
+			if not is_corner and anchor.distance_squared_to(start_anchor) < 0.05:
+				piece = "roadStart.glb"
+			_place_kit_road(track, kit, piece, anchor, rotation_y_deg, false)
+	else:
+		MeshFactory.add_surface_slab(
+			track, spec.center, spec.size, rotation_y_deg, surface_color, false
+		)
 	_stamp_spec_to_collision_grid(spec, rotation_y_deg)
 	if not covered:
 		_register_road_aabb(spec, rotation_y_deg)
-	if f1_curbs:
+	if f1_curbs and kit == "":
 		MeshFactory.add_track_line(track, spec.line_center, spec.line_size, rotation_y_deg)
 
 
