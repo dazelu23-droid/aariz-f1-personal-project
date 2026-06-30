@@ -271,18 +271,18 @@ static func _place_grandstands(props: Node3D, kit: String, layout: Dictionary) -
 	_place(props, kit, "grandStandCoveredRound.glb", Vector3(11.0, 0, -22.0), -90.0)
 
 	# Back straight — north side facing the track.
-	var back_z: float = float(road["min_z"]) + 2.0
-	var x: float = float(road["min_x"]) + 18.0
-	while x <= float(road["max_x"]) - 18.0:
+	var back_z: float = road.min_z + 2.0
+	var x: float = road.min_x + 18.0
+	while x <= road.max_x - 18.0:
 		var model: String = "grandStandRound.glb" if idx % 5 == 0 else models[idx % 3]
 		_place(props, kit, model, Vector3(x, 0, back_z), 0.0)
 		x += 3.2
 		idx += 1
 
 	# South straight — grandstands along the home straight return.
-	var south_z: float = float(road["max_z"]) - 2.0
-	x = float(road["min_x"]) + 14.0
-	while x <= float(road["max_x"]) - 14.0:
+	var south_z: float = road.max_z - 2.0
+	x = road.min_x + 14.0
+	while x <= road.max_x - 14.0:
 		_place(props, kit, models[idx % 3], Vector3(x, 0, south_z), 180.0)
 		x += 3.5
 		idx += 1
@@ -291,10 +291,10 @@ static func _place_grandstands(props: Node3D, kit: String, layout: Dictionary) -
 static func _place_corners(props: Node3D, kit: String, layout: Dictionary) -> void:
 	var road: Dictionary = layout["bounds"]
 	var corners := [
-		{"file": "roadCornerLargeSand.glb", "pos": Vector3(float(road["min_x"]) + 2.0, 0, float(road["min_z"]) + 2.0), "rot": 0.0},
-		{"file": "roadCornerLargeWall.glb", "pos": Vector3(float(road["max_x"]) - 2.0, 0, float(road["min_z"]) + 2.0), "rot": -90.0},
-		{"file": "roadCornerLargeSand.glb", "pos": Vector3(float(road["max_x"]) - 2.0, 0, float(road["max_z"]) - 2.0), "rot": 180.0},
-		{"file": "roadCornerLargeWall.glb", "pos": Vector3(float(road["min_x"]) + 2.0, 0, float(road["max_z"]) - 2.0), "rot": 90.0},
+		{"file": "roadCornerLargeSand.glb", "pos": Vector3(road.min_x + 2.0, 0, road.min_z + 2.0), "rot": 0.0},
+		{"file": "roadCornerLargeWall.glb", "pos": Vector3(road.max_x - 2.0, 0, road.min_z + 2.0), "rot": -90.0},
+		{"file": "roadCornerLargeSand.glb", "pos": Vector3(road.max_x - 2.0, 0, road.max_z - 2.0), "rot": 180.0},
+		{"file": "roadCornerLargeWall.glb", "pos": Vector3(road.min_x + 2.0, 0, road.max_z - 2.0), "rot": 90.0},
 	]
 	for c in corners:
 		_place(props, kit, c.file, c.pos, c.rot)
@@ -302,9 +302,9 @@ static func _place_corners(props: Node3D, kit: String, layout: Dictionary) -> vo
 
 static func _place_back_straight(props: Node3D, kit: String, layout: Dictionary) -> void:
 	var road: Dictionary = layout["bounds"]
-	var x: float = float(road["min_x"]) + 12.0
-	while x <= float(road["max_x"]) - 12.0:
-		_place(props, kit, "billboard.glb", Vector3(x, 0, float(road["min_z"]) - 6.0), 0.0)
+	var x: float = road.min_x + 12.0
+	while x <= road.max_x - 12.0:
+		_place(props, kit, "billboard.glb", Vector3(x, 0, road.min_z - 6.0), 0.0)
 		x += 8.0
 
 
