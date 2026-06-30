@@ -315,11 +315,15 @@ static func _place_nature_mountain_border(
 	var inner_margin := 50.0
 	var step := 4.5
 	var path_clear := road_width * 0.5 + 7.0
+	var bounds_min_x: float = road["min_x"]
+	var bounds_max_x: float = road["max_x"]
+	var bounds_min_z: float = road["min_z"]
+	var bounds_max_z: float = road["max_z"]
 
-	var min_x: float = road.min_x - margin
-	var max_x: float = road.max_x + margin
-	var min_z: float = road.min_z - margin
-	var max_z: float = road.max_z + margin
+	var min_x: float = bounds_min_x - margin
+	var max_x: float = bounds_max_x + margin
+	var min_z: float = bounds_min_z - margin
+	var max_z: float = bounds_max_z + margin
 
 	var corners: Array[Vector3] = [
 		Vector3(min_x, 0.0, min_z), Vector3(max_x, 0.0, min_z),
@@ -338,13 +342,14 @@ static func _place_nature_mountain_border(
 
 	var rings: Array[float] = [margin, inner_margin]
 	for ring in rings:
-		var ring_min_x: float = road.min_x - ring
-		var ring_max_x: float = road.max_x + ring
-		var ring_min_z: float = road.min_z - ring
-		var ring_max_z: float = road.max_z + ring
+		var ring_min_x: float = bounds_min_x - ring
+		var ring_max_x: float = bounds_max_x + ring
+		var ring_min_z: float = bounds_min_z - ring
+		var ring_max_z: float = bounds_max_z + ring
 		var x: float = ring_min_x + step * 0.5
+		var z_sides: Array[float] = [ring_min_z, ring_max_z]
 		while x <= ring_max_x:
-			for z_side in [ring_min_z, ring_max_z]:
+			for z_side in z_sides:
 				var pos_n: Vector3 = Vector3(x, 0.0, z_side)
 				if not _near_path(pos_n, samples, path_clear):
 					var wall_model: String = wall_models[rng.randi_range(0, wall_models.size() - 1)]
@@ -355,8 +360,9 @@ static func _place_nature_mountain_border(
 			x += step
 
 		var z: float = ring_min_z + step * 0.5
+		var x_sides: Array[float] = [ring_min_x, ring_max_x]
 		while z <= ring_max_z:
-			for x_side in [ring_min_x, ring_max_x]:
+			for x_side in x_sides:
 				var pos_e: Vector3 = Vector3(x_side, 0.0, z)
 				if not _near_path(pos_e, samples, path_clear):
 					var wall_model_e: String = wall_models[rng.randi_range(0, wall_models.size() - 1)]

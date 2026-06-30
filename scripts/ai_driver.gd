@@ -1,6 +1,6 @@
 extends Node
 
-var _car: RigidBody3D
+var _car: RacingCar
 var _samples: Array[Vector3] = []
 var _target_index := 1
 var _profile: Dictionary = {}
@@ -8,7 +8,7 @@ var _track_base: Node3D
 var _rng := RandomNumberGenerator.new()
 
 
-func setup(car: RigidBody3D, samples: Array, profile: Dictionary, track_base: Node3D) -> void:
+func setup(car: RacingCar, samples: Array, profile: Dictionary, track_base: Node3D) -> void:
 	_car = car
 	_profile = profile
 	_track_base = track_base
@@ -51,7 +51,7 @@ func _physics_process(_delta: float) -> void:
 		1.0
 	)
 
-	var throttle := 0.82 * _profile.get("accel_mult", 1.0)
+	var throttle: float = 0.82 * _profile.get("accel_mult", 1.0)
 	if absf(steer) > 0.45:
 		throttle *= lerpf(1.0, 0.55, _profile.get("corner_caution", 0.5))
 	if local_pos.distance_to(_samples[_target_index]) > 18.0:

@@ -62,13 +62,13 @@ func get_road_surface_height(at_global: Vector3 = Vector3.ZERO) -> float:
 	if samples.is_empty():
 		return ROAD_TOP_LOCAL * s + CAR_RIDE_HEIGHT
 
-	var best_dist := INF
+	var best_dist: float = INF
 	var best_y := 0.0
 	for sample in samples:
-		if sample is not Vector3:
+		if not (sample is Vector3):
 			continue
 		var point: Vector3 = sample
-		var dist := Vector2(local.x - point.x, local.z - point.z).length_squared()
+		var dist: float = Vector2(local.x - point.x, local.z - point.z).length_squared()
 		if dist < best_dist:
 			best_dist = dist
 			best_y = point.y
@@ -116,7 +116,7 @@ func _spawn_ai_opponents() -> void:
 	var spacing := maxi(3, int(round(6.0 / layout.get("tile", 1.25))))
 
 	for i in count:
-		var car := CAR_SCENE.instantiate() as RigidBody3D
+		var car := CAR_SCENE.instantiate() as RacingCar
 		car.is_ai = true
 		car.car_visual_index = GameSettings.random_car_index(rng)
 		car.apply_ai_profile(profile)

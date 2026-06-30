@@ -3,9 +3,9 @@ extends Node3D
 
 func _ready() -> void:
 	rotation_degrees.y = 180.0
-	var owner_car := get_parent() as RigidBody3D
+	var owner_car := get_parent() as RacingCar
 	var car_index := -1
-	if owner_car and owner_car.get("car_visual_index") != null:
+	if owner_car:
 		car_index = owner_car.car_visual_index
 	var car: Dictionary = GameSettings.get_car(car_index) if car_index >= 0 else GameSettings.get_selected_car()
 	var body_path: String = car.body

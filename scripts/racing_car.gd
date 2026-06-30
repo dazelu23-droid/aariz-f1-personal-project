@@ -1,4 +1,5 @@
 extends RigidBody3D
+class_name RacingCar
 
 const MAX_SPEED := 40.0
 const MAX_REVERSE_SPEED := 18.0
