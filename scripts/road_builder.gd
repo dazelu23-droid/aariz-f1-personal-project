@@ -2,16 +2,19 @@ class_name RoadBuilder
 extends RefCounted
 
 const SLAB_H := 0.14
+const KIT_TILE := 1.0
 const CURB_H := 0.076
 const CURB_W := 0.14
 
 static var _placed_road_aabbs: Array = []
+static var _placed_kit_cells: Dictionary = {}
 static var _collision_cells: Dictionary = {}
 static var _collision_cell_size: float = 0.55
 
 
 static func _reset_road_overlap_tracker() -> void:
 	_placed_road_aabbs.clear()
+	_placed_kit_cells.clear()
 	_collision_cells.clear()
 
 
@@ -27,7 +30,7 @@ static func build_racing_circuit(
 	kit: String
 ) -> Vector3:
 	var tile := 2.0
-	_begin_road_build(tile)
+	_begin_road_build(KIT_TILE if kit != "" else tile)
 	var width := 3.0
 	var waypoints: Array = _chamfer_waypoints(_racing_circuit_waypoints(), 5.0)
 	var layout: Dictionary = _build_waypoint_circuit(
@@ -47,7 +50,9 @@ static func build_racing_circuit(
 		road.max_z + 40,
 		1.0,
 		road,
-		kit + "grass.glb"
+		kit + "grass.glb",
+		Color(-1, -1, -1),
+		-0.16 if kit != "" else -0.03
 	)
 	return waypoints[0] + Vector3(0.5, 0.0, -2.0)
 
@@ -81,7 +86,7 @@ static func build_city_circuit(
 	kit: String
 ) -> Vector3:
 	var tile := 2.0
-	_begin_road_build(tile)
+	_begin_road_build(KIT_TILE if kit != "" else tile)
 	var width := 3.2
 	var waypoints: Array = _chamfer_waypoints(_city_street_waypoints(), 2.2)
 	var layout: Dictionary = _build_waypoint_circuit(
@@ -164,6 +169,7 @@ static func _build_waypoint_circuit(
 
 	samples.append(waypoints[0])
 	var start_anchor: Vector3 = waypoints[0]
+	var place_tile := KIT_TILE if kit != "" else tile
 
 	for seg_idx in range(waypoints.size() - 1):
 		var a: Vector3 = waypoints[seg_idx]
@@ -180,14 +186,16 @@ static func _build_waypoint_circuit(
 			var nd := nb - b
 			if nd.length_squared() > 0.01:
 				next_rot = _direction_to_rot(nd.normalized())
-		var steps := maxi(1, int(round(seg_len / tile)))
+		var steps := maxi(1, int(round(seg_len / place_tile)))
 		for step in range(steps):
 			var t0 := float(step) / float(steps)
 			var t1 := float(step + 1) / float(steps)
 			var anchor := a + dir * (seg_len * t0)
 			var center := a.lerp(b, (t0 + t1) * 0.5)
 			var is_corner := step == steps - 1 and rot != next_rot
-			_tile(track, border, anchor, rot, is_corner, tile, width, use_curbs, surface, kit, start_anchor)
+			_tile(
+				track, border, anchor, rot, is_corner, tile, width, use_curbs, surface, kit, start_anchor, place_tile
+			)
 			samples.append(center)
 		samples.append(b)
 
@@ -384,16 +392,20 @@ static func _tile(
 	f1_curbs: bool,
 	surface_color: Color = MeshFactory.ASPHALT,
 	kit: String = "",
-	start_anchor: Vector3 = Vector3.ZERO
+	start_anchor: Vector3 = Vector3.ZERO,
+	place_tile: float = -1.0
 ) -> void:
-	var spec := _slab_spec(anchor, rotation_y_deg, is_corner, tile, width)
+	if place_tile < 0.0:
+		place_tile = KIT_TILE if kit != "" else tile
+	var spec := _slab_spec(anchor, rotation_y_deg, is_corner, place_tile, width)
 	var covered := _road_already_covered(spec, rotation_y_deg)
 	if kit != "":
-		if not covered:
+		if not _kit_already_placed(anchor):
 			var piece := "roadCornerSmall.glb" if is_corner else "roadStraight.glb"
 			if not is_corner and anchor.distance_squared_to(start_anchor) < 0.05:
 				piece = "roadStart.glb"
 			_place_kit_road(track, kit, piece, anchor, rotation_y_deg, false)
+			_register_kit_cell(anchor)
 	else:
 		MeshFactory.add_surface_slab(
 			track, spec.center, spec.size, rotation_y_deg, surface_color, false
@@ -439,6 +451,18 @@ static func _road_already_covered(spec: Dictionary, rot_y: float) -> bool:
 		if _aabb_overlaps(aabb, existing):
 			return true
 	return false
+
+
+static func _kit_cell_key(anchor: Vector3) -> String:
+	return "%d,%d" % [int(round(anchor.x / KIT_TILE)), int(round(anchor.z / KIT_TILE))]
+
+
+static func _kit_already_placed(anchor: Vector3) -> bool:
+	return _placed_kit_cells.has(_kit_cell_key(anchor))
+
+
+static func _register_kit_cell(anchor: Vector3) -> void:
+	_placed_kit_cells[_kit_cell_key(anchor)] = true
 
 
 static func _register_road_aabb(spec: Dictionary, rot_y: float) -> void:
@@ -572,13 +596,14 @@ static func _fill_ground_excluding(
 	step: float,
 	road: Dictionary,
 	asset: String = "",
-	flat_color: Color = Color(-1, -1, -1)
+	flat_color: Color = Color(-1, -1, -1),
+	fill_y: float = -0.03
 ) -> void:
 	var x := min_x
 	while x <= max_x:
 		var z := min_z
 		while z <= max_z:
-			var pos := Vector3(x, -0.03, z)
+			var pos := Vector3(x, fill_y, z)
 			if not _on_road(pos, road):
 				if flat_color.r >= 0.0:
 					MeshFactory.add_surface_slab(
