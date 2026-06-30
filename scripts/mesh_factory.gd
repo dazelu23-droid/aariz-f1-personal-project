@@ -287,7 +287,7 @@ static func _apply_mesh_materials(
 	for i in mesh.get_surface_count():
 		var surface_mat := mesh.surface_get_material(i)
 		if surface_mat:
-			mesh_instance.set_surface_override_material(i, surface_mat)
+			mesh_instance.set_surface_override_material(i, _polish_material(surface_mat))
 			has_surface_material = true
 
 	if not has_surface_material and texture_path != "" and ResourceLoader.exists(texture_path):
@@ -313,3 +313,14 @@ static func _make_material(texture_path: String) -> StandardMaterial3D:
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	mat.albedo_texture = load(texture_path)
 	return mat
+
+
+static func _polish_material(source: Material) -> Material:
+	if source is StandardMaterial3D:
+		var mat := (source as StandardMaterial3D).duplicate()
+		mat.roughness = clampf(mat.roughness * 0.88, 0.38, 0.9)
+		mat.metallic = clampf(mat.metallic, 0.0, 0.1)
+		mat.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+		return mat
+	return source

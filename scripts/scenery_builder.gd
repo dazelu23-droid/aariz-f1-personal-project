@@ -260,29 +260,66 @@ static func _place_grandstands(props: Node3D, kit: String, layout: Dictionary) -
 	var idx := 0
 
 	# Main straight — east side overlooking start/finish and pit lane.
-	var z := -3.0
-	while z >= -70.0:
+	var z := -2.0
+	while z >= -72.0:
 		_place(props, kit, models[idx % 3], Vector3(9.0, 0, z), -90.0)
-		z -= 2.4
+		if idx % 2 == 0:
+			_place(props, kit, "grandStandCovered.glb", Vector3(13.5, 0, z), -90.0)
+		z -= 1.5
 		idx += 1
+
+	# Main straight — west side.
+	z = -2.0
+	idx = 0
+	while z >= -72.0:
+		_place(props, kit, models[(idx + 1) % 3], Vector3(-10.0, 0, z), 90.0)
+		if idx % 3 == 0:
+			_place(props, kit, "grandStandRound.glb", Vector3(-14.0, 0, z), 90.0)
+		z -= 1.7
+		idx += 1
+
 	_place(props, kit, "grandStandCoveredRound.glb", Vector3(11.0, 0, -5.0), -90.0)
 	_place(props, kit, "grandStandCoveredRound.glb", Vector3(11.0, 0, -22.0), -90.0)
+	_place(props, kit, "grandStandCoveredRound.glb", Vector3(11.0, 0, -42.0), -90.0)
+	_place(props, kit, "grandStandCoveredRound.glb", Vector3(-12.0, 0, -30.0), 90.0)
 
 	# Back straight — north side facing the track.
-	var back_z: float = road.min_z + 2.0
-	var x: float = road.min_x + 18.0
-	while x <= road.max_x - 18.0:
-		var model: String = "grandStandRound.glb" if idx % 5 == 0 else models[idx % 3]
+	var back_z: float = road.min_z + 1.5
+	var x: float = road.min_x + 10.0
+	while x <= road.max_x - 10.0:
+		var model: String = "grandStandRound.glb" if idx % 4 == 0 else models[idx % 3]
 		_place(props, kit, model, Vector3(x, 0, back_z), 0.0)
-		x += 3.2
+		if idx % 2 == 0:
+			_place(props, kit, "grandStandCovered.glb", Vector3(x, 0, back_z - 5.5), 0.0)
+		x += 2.2
 		idx += 1
 
 	# South straight — grandstands along the home straight return.
-	var south_z: float = road.max_z - 2.0
-	x = road.min_x + 14.0
-	while x <= road.max_x - 14.0:
+	var south_z: float = road.max_z - 1.5
+	x = road.min_x + 10.0
+	while x <= road.max_x - 10.0:
 		_place(props, kit, models[idx % 3], Vector3(x, 0, south_z), 180.0)
-		x += 3.5
+		if idx % 2 == 1:
+			_place(props, kit, "grandStandCovered.glb", Vector3(x, 0, south_z + 5.5), 180.0)
+		x += 2.4
+		idx += 1
+
+	_place_grandstand_horizon(props, kit, road)
+
+
+static func _place_grandstand_horizon(props: Node3D, kit: String, road: Dictionary) -> void:
+	var models := ["grandStand.glb", "grandStandCovered.glb", "grandStandRound.glb", "grandStandCoveredRound.glb"]
+	var idx := 0
+	var outer := 20.0
+
+	for x in range(int(road.min_x) - 6, int(road.max_x) + 8, 3):
+		_place(props, kit, models[idx % models.size()], Vector3(x, 0, road.min_z - outer), 0.0)
+		_place(props, kit, models[(idx + 2) % models.size()], Vector3(x, 0, road.max_z + outer), 180.0)
+		idx += 1
+
+	for z in range(int(road.min_z) - 6, int(road.max_z) + 8, 3):
+		_place(props, kit, models[idx % models.size()], Vector3(road.max_x + outer, 0, z), -90.0)
+		_place(props, kit, models[(idx + 1) % models.size()], Vector3(road.min_x - outer, 0, z), 90.0)
 		idx += 1
 
 

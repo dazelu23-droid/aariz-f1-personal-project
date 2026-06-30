@@ -4,8 +4,6 @@ extends RefCounted
 const SLAB_H := 0.14
 const KIT_TILE := 1.0
 const RACING_TRACK_WIDTH := 5.5
-const FENCE_OFFSET := 0.45
-const FENCE_COLLISION := Vector3(0.05, 0.46, 0.94)
 const CURB_H := 0.076
 const CURB_W := 0.14
 
@@ -43,7 +41,6 @@ static func build_racing_circuit(
 		track, waypoints[0] + Vector3(0.5, SLAB_H + 0.02, -1.6), width
 	)
 	_place_path_guides(track, layout, kit)
-	_place_visual_barriers(border, layout, width, kit, FENCE_OFFSET)
 	var road: Dictionary = layout["bounds"]
 	_fill_ground_excluding(
 		fill,
@@ -236,65 +233,6 @@ static func _place_path_guides(
 		marker_idx += 1
 
 
-static func _place_visual_barriers(
-	border: Node3D,
-	layout: Dictionary,
-	width: float,
-	kit: String,
-	offset: float
-) -> void:
-	var samples: Array = layout.get("samples", [])
-	if kit == "":
-		for i in range(0, maxi(0, samples.size() - 1), 1):
-			var a: Vector3 = samples[i]
-			var b: Vector3 = samples[i + 1]
-			if a.distance_squared_to(b) < 0.02:
-				continue
-			var dir := (b - a).normalized()
-			var perp := Vector3(-dir.z, 0.0, dir.x)
-			var rot := _direction_to_rot(dir)
-			var p := a.lerp(b, 0.5)
-			var side := width * 0.5 + offset
-			var left := p + perp * side
-			var right := p - perp * side
-			var log_color := Color(0.42, 0.3, 0.18)
-			var stone_color := Color(0.52, 0.5, 0.46)
-			var marker := log_color if i % 2 == 0 else stone_color
-			MeshFactory.add_visual_marker(
-				border, left + Vector3(0.0, 0.07, 0.0), Vector3(0.28, 0.14, 0.85), rot, marker
-			)
-			MeshFactory.add_visual_marker(
-				border, right + Vector3(0.0, 0.07, 0.0), Vector3(0.28, 0.14, 0.85), rot, marker
-			)
-		return
-
-	var placed: Dictionary = {}
-	for i in range(samples.size() - 1):
-		var a: Vector3 = samples[i]
-		var b: Vector3 = samples[i + 1]
-		if a.distance_squared_to(b) < 0.02:
-			continue
-		var delta := b - a
-		var seg_len := delta.length()
-		var dir := delta / seg_len
-		var perp := Vector3(-dir.z, 0.0, dir.x)
-		var track_rot := _direction_to_rot(dir)
-		var fence_rot_y := track_rot + 90.0
-		var side := width * 0.5 + offset
-		var steps := maxi(1, int(round(seg_len / KIT_TILE)))
-		for step in range(steps):
-			var t := float(step) / float(steps)
-			var p := a + dir * (seg_len * t)
-			var cell_key := "%d,%d,%d" % [
-				int(round(p.x / KIT_TILE)), int(round(p.z / KIT_TILE)), int(track_rot)
-			]
-			if placed.has(cell_key):
-				continue
-			placed[cell_key] = true
-			_place_kit_fence(border, kit, p + perp * side, fence_rot_y)
-			_place_kit_fence(border, kit, p - perp * side, fence_rot_y)
-
-
 static func _preview_waypoint_layout(waypoints: Array, tile: float) -> Dictionary:
 	var samples: Array = []
 	if waypoints.is_empty():
@@ -427,9 +365,12 @@ static func _tile(
 	var spec := _slab_spec(anchor, rotation_y_deg, is_corner, place_tile, width)
 	var covered := _road_already_covered(spec, rotation_y_deg)
 	if kit != "":
+		MeshFactory.add_surface_slab(
+			track, spec.center, spec.size, rotation_y_deg, surface_color, false
+		)
 		if not _kit_already_placed(anchor):
-			var piece := "roadCornerSmall.glb" if is_corner else "roadStraight.glb"
-			if not is_corner and anchor.distance_squared_to(start_anchor) < 0.05:
+			var piece := "roadStraight.glb"
+			if anchor.distance_squared_to(start_anchor) < 0.05:
 				piece = "roadStart.glb"
 			_place_kit_road(
 				track, kit, piece, anchor, rotation_y_deg, false, _road_piece_scale(rotation_y_deg, width)
@@ -658,23 +599,6 @@ static func _road_piece_scale(rotation_y_deg: float, width: float) -> Vector3:
 	if norm == 0 or norm == 180:
 		return Vector3(width, 1.0, 1.0)
 	return Vector3(1.0, 1.0, width)
-
-
-static func _place_kit_fence(border: Node3D, kit: String, pos: Vector3, rotation_y_deg: float) -> void:
-	var path := kit + "fenceStraight.glb"
-	if not ResourceLoader.exists(path):
-		return
-	MeshFactory.place_piece(
-		border,
-		path,
-		"",
-		pos,
-		rotation_y_deg,
-		true,
-		Vector3.ONE,
-		0.0,
-		FENCE_COLLISION
-	)
 
 
 static func _place_kit_road(

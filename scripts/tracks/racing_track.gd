@@ -28,7 +28,7 @@ func get_track_center_offset() -> Vector3:
 
 
 func get_ground_color() -> Color:
-	return Color(0.2, 0.44, 0.22)
+	return Color(0.24, 0.5, 0.28)
 
 
 func get_ground_size() -> float:
@@ -38,7 +38,7 @@ func get_ground_size() -> float:
 
 
 func get_horizon_color() -> Color:
-	return Color(0.18, 0.4, 0.22)
+	return Color(0.2, 0.46, 0.26)
 
 
 func _add_track_ground() -> void:
