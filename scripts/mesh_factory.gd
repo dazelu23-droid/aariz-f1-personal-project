@@ -324,3 +324,56 @@ static func _polish_material(source: Material) -> Material:
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 		return mat
 	return source
+
+
+static func add_multimesh_kit_pieces(parent: Node3D, path: String, instances: Array) -> void:
+	if instances.is_empty() or not ResourceLoader.exists(path):
+		return
+	var asset := _extract_mesh_asset(path)
+	var mesh: Mesh = asset.get("mesh")
+	if mesh == null:
+		return
+
+	var multi := MultiMesh.new()
+	multi.mesh = mesh
+	multi.transform_format = MultiMesh.TRANSFORM_3D
+	multi.instance_count = instances.size()
+
+	for i in instances.size():
+		var inst: Dictionary = instances[i]
+		var pos: Vector3 = inst.get("pos", Vector3.ZERO)
+		var rot_y: float = inst.get("rot_y", 0.0)
+		var scale: Vector3 = inst.get("scale", Vector3.ONE)
+		var basis := Basis.IDENTITY.rotated(Vector3.UP, deg_to_rad(rot_y)).scaled(scale)
+		multi.set_instance_transform(i, Transform3D(basis, pos + Vector3(0.0, 0.03, 0.0)))
+
+	var renderer := MultiMeshInstance3D.new()
+	renderer.name = path.get_file().get_basename()
+	renderer.multimesh = multi
+	var material: Material = asset.get("material")
+	if material:
+		renderer.material_override = material
+	parent.add_child(renderer)
+
+
+static func _extract_mesh_asset(path: String) -> Dictionary:
+	var resource := load(path)
+	if resource == null:
+		return {}
+
+	if resource is Mesh:
+		return {"mesh": resource, "material": null}
+
+	if resource is PackedScene:
+		var temp: Node = (resource as PackedScene).instantiate()
+		var mesh_nodes := _find_all_mesh_instances(temp)
+		for mesh_node in mesh_nodes:
+			if mesh_node.mesh:
+				var mat := mesh_node.get_active_material(0)
+				if mat is StandardMaterial3D:
+					mat = _polish_material(mat)
+				temp.free()
+				return {"mesh": mesh_node.mesh, "material": mat}
+		temp.free()
+
+	return {}

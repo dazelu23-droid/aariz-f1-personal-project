@@ -8,14 +8,14 @@ const CURB_H := 0.076
 const CURB_W := 0.14
 
 static var _placed_road_aabbs: Array = []
-static var _placed_kit_cells: Dictionary = {}
+static var _kit_instances: Dictionary = {}
 static var _collision_cells: Dictionary = {}
 static var _collision_cell_size: float = 0.55
 
 
 static func _reset_road_overlap_tracker() -> void:
 	_placed_road_aabbs.clear()
-	_placed_kit_cells.clear()
+	_kit_instances.clear()
 	_collision_cells.clear()
 
 
@@ -200,6 +200,8 @@ static func _build_waypoint_circuit(
 		samples.append(b)
 
 	var layout := _layout_from_samples(samples, tile)
+	if kit != "":
+		_finish_kit_road_visuals(track, kit)
 	_finish_road_collision(track)
 	return layout
 
@@ -365,17 +367,10 @@ static func _tile(
 	var spec := _slab_spec(anchor, rotation_y_deg, is_corner, place_tile, width)
 	var covered := _road_already_covered(spec, rotation_y_deg)
 	if kit != "":
-		MeshFactory.add_surface_slab(
-			track, spec.center, spec.size, rotation_y_deg, surface_color, false
-		)
-		if not _kit_already_placed(anchor):
-			var piece := "roadStraight.glb"
-			if anchor.distance_squared_to(start_anchor) < 0.05:
-				piece = "roadStart.glb"
-			_place_kit_road(
-				track, kit, piece, anchor, rotation_y_deg, false, _road_piece_scale(rotation_y_deg, width)
-			)
-			_register_kit_cell(anchor)
+		var piece := "roadStraight.glb"
+		if anchor.distance_squared_to(start_anchor) < 0.05:
+			piece = "roadStart.glb"
+		_queue_kit_piece(piece, anchor, rotation_y_deg, _road_piece_scale(rotation_y_deg, width))
 	else:
 		MeshFactory.add_surface_slab(
 			track, spec.center, spec.size, rotation_y_deg, surface_color, false
@@ -423,16 +418,31 @@ static func _road_already_covered(spec: Dictionary, rot_y: float) -> bool:
 	return false
 
 
-static func _kit_cell_key(anchor: Vector3) -> String:
-	return "%d,%d" % [int(round(anchor.x / KIT_TILE)), int(round(anchor.z / KIT_TILE))]
+static func _queue_kit_piece(
+	piece: String,
+	anchor: Vector3,
+	rotation_y_deg: float,
+	piece_scale: Vector3
+) -> void:
+	if not _kit_instances.has(piece):
+		_kit_instances[piece] = []
+	(_kit_instances[piece] as Array).append({
+		"pos": anchor,
+		"rot_y": rotation_y_deg,
+		"scale": piece_scale,
+	})
 
 
-static func _kit_already_placed(anchor: Vector3) -> bool:
-	return _placed_kit_cells.has(_kit_cell_key(anchor))
-
-
-static func _register_kit_cell(anchor: Vector3) -> void:
-	_placed_kit_cells[_kit_cell_key(anchor)] = true
+static func _finish_kit_road_visuals(track: Node3D, kit: String) -> void:
+	if _kit_instances.is_empty():
+		return
+	var visual_root := Node3D.new()
+	visual_root.name = "MergedRoadKit"
+	track.add_child(visual_root)
+	for piece in _kit_instances.keys():
+		var instances: Array = _kit_instances[piece]
+		MeshFactory.add_multimesh_kit_pieces(visual_root, kit + piece, instances)
+	_kit_instances.clear()
 
 
 static func _register_road_aabb(spec: Dictionary, rot_y: float) -> void:
