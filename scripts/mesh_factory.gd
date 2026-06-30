@@ -247,12 +247,12 @@ static func add_finish_line_markers(
 	rotation_y_deg: float = 0.0
 ) -> void:
 	var stripe_count := 10
-	var stripe_w := width / float(stripe_count)
+	var stripe_w: float = width / float(stripe_count)
 	var stripe_depth := 0.65
 	for i in range(stripe_count):
 		var color := CURB_WHITE if i % 2 == 0 else Color(0.06, 0.06, 0.06)
-		var offset := -width * 0.5 + stripe_w * 0.5 + i * stripe_w
-		var stripe_center := center + Vector3(offset, 0.0, 0.0)
+		var offset: float = -width * 0.5 + stripe_w * 0.5 + i * stripe_w
+		var stripe_center: Vector3 = center + Vector3(offset, 0.0, 0.0)
 		_add_colored_box(
 			parent,
 			stripe_center,
@@ -262,12 +262,13 @@ static func add_finish_line_markers(
 			false
 		)
 
-	var post_h := 3.2
-	var post_offset := width * 0.5 + 0.45
-	var rot_rad := deg_to_rad(rotation_y_deg)
-	var perp := Vector3(cos(rot_rad), 0.0, -sin(rot_rad))
-	for side in [-1.0, 1.0]:
-		var post_center := center + perp * post_offset * side + Vector3(0.0, post_h * 0.5, 0.0)
+	var post_h: float = 3.2
+	var post_offset: float = width * 0.5 + 0.45
+	var rot_rad: float = deg_to_rad(rotation_y_deg)
+	var perp: Vector3 = Vector3(cos(rot_rad), 0.0, -sin(rot_rad))
+	var sides: Array[float] = [-1.0, 1.0]
+	for side in sides:
+		var post_center: Vector3 = center + perp * post_offset * side + Vector3(0.0, post_h * 0.5, 0.0)
 		_add_colored_box(
 			parent,
 			post_center,
@@ -276,7 +277,7 @@ static func add_finish_line_markers(
 			Color(0.92, 0.12, 0.12),
 			false
 		)
-	var banner_center := center + Vector3(0.0, post_h + 0.12, 0.0)
+	var banner_center: Vector3 = center + Vector3(0.0, post_h + 0.12, 0.0)
 	_add_colored_box(
 		parent,
 		banner_center,
