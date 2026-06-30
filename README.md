@@ -9,7 +9,7 @@ Multi-track arcade racing game built with Kenney asset packs.
 3. Pick a circuit and race.
 
 ```powershell
-& "c:\Users\Oit-student\Downloads\Godot_v4.7-stable_win64.exe\Godot_v4.7-stable_win64.exe" --path "c:\Users\Oit-student\racing game"
+& "C:\Users\Oit-student\Downloads\Godot_v4.7-stable_win64.exe\Godot_v4.7-stable_win64.exe" --path "C:\Users\Oit-student\aariz-f1-personal-project"
 ```
 
 ## Controls
@@ -39,7 +39,7 @@ The player car uses the **`race.obj`** model from `car-kit` with `wheel-racing.o
 If you add new files, run:
 
 ```powershell
-& "c:\Users\Oit-student\Downloads\Godot_v4.7-stable_win64.exe\Godot_v4.7-stable_win64_console.exe" --headless --path "c:\Users\Oit-student\racing game" --import
+& "C:\Users\Oit-student\Downloads\Godot_v4.7-stable_win64.exe\Godot_v4.7-stable_win64_console.exe" --headless --path "C:\Users\Oit-student\aariz-f1-personal-project" --import
 ```
 
 ## Asset packs (`res://assets/`)

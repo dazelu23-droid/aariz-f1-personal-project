@@ -1,5 +1,12 @@
 {
-    "terminal.integrated.env.windows": {
-        "PATH": "C:\\Users\\Oit-student\\AppData\\Local\\Programs\\Git\\cmd;${env:PATH}"
-    }
+  "terminal.integrated.env.windows": {
+    "PATH": "C:\\Users\\Oit-student\\AppData\\Local\\Programs\\Git\\cmd;${env:PATH}"
+  },
+  "files.exclude": {
+    "**/.godot": true
+  },
+  "search.exclude": {
+    "**/.godot": true,
+    "**/*.import": true
+  }
 }
