@@ -369,11 +369,12 @@ static func _extract_mesh_asset(path: String) -> Dictionary:
 		var mesh_nodes := _find_all_mesh_instances(temp)
 		for mesh_node in mesh_nodes:
 			if mesh_node.mesh:
+				var mesh := mesh_node.mesh
 				var mat := mesh_node.get_active_material(0)
 				if mat is StandardMaterial3D:
 					mat = _polish_material(mat)
 				temp.free()
-				return {"mesh": mesh_node.mesh, "material": mat}
+				return {"mesh": mesh, "material": mat}
 		temp.free()
 
 	return {}
